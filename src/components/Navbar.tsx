@@ -15,7 +15,9 @@ import {
   LogOut,
   Crown,
   Calculator,
-  Zap
+  Zap,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatLacs } from '../utils/formatters';
@@ -50,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     carGoal 
   } = useFinance();
 
-  const { currentUser, logout, isCreator, isPro } = useAuth();
+  const { currentUser, logout, isCreator, isPro, subscription } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-[#0B0F17]/80 backdrop-blur-md transition-colors">
@@ -134,12 +136,44 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
                 isPro
                   ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/30 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/20'
+                  : subscription?.status === 'pending'
+                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 animate-pulse'
+                  : subscription?.status === 'rejected'
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                   : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-md shadow-amber-500/25'
               }`}
-              title={isPro ? 'You have active TURBO VIP status' : 'Upgrade to TURBO Pro for ₨ 100/mo'}
+              title={
+                isPro
+                  ? 'You have active TURBO VIP status'
+                  : subscription?.status === 'pending'
+                  ? 'Your TURBO payment is pending verification'
+                  : subscription?.status === 'rejected'
+                  ? 'TURBO payment verification failed - click to retry'
+                  : 'Upgrade to TURBO Pro for ₨ 100/mo'
+              }
             >
-              <Zap className={`w-3.5 h-3.5 fill-current ${isPro ? 'text-amber-400' : 'text-slate-950'}`} />
-              <span className="font-extrabold">{isPro ? 'TURBO VIP' : 'TURBO ₨100'}</span>
+              {isPro ? (
+                <>
+                  <Zap className="w-3.5 h-3.5 fill-current text-amber-400" />
+                  <span className="font-extrabold">TURBO VIP</span>
+                </>
+              ) : subscription?.status === 'pending' ? (
+                <>
+                  <Clock className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="font-extrabold hidden sm:inline">TURBO Pending...</span>
+                  <span className="font-extrabold sm:hidden">Pending</span>
+                </>
+              ) : subscription?.status === 'rejected' ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-300" />
+                  <span className="font-extrabold">TURBO Retry</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                  <span className="font-extrabold">TURBO ₨100</span>
+                </>
+              )}
             </motion.button>
           )}
 

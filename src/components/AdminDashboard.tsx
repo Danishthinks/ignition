@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { users, exitCreatorMode } = useAuth();
+  const { users, exitCreatorMode, verifySubscription } = useAuth();
 
   const [leads, setLeads] = useState<FinancingLead[]>(() => {
     const saved = localStorage.getItem('ignition_financing_leads');
@@ -43,6 +43,12 @@ export const AdminDashboard: React.FC = () => {
 
   const drivers = users.filter(u => u.role === 'driver');
   const totalSavedAcrossPlatform = drivers.reduce((acc, u) => acc + (u.startingBalance || 0), 0);
+  
+  // TURBO Subscription stats
+  const subscribers = drivers.filter(u => !!u.subscription);
+  const pendingSubs = subscribers.filter(u => u.subscription?.status === 'pending');
+  const activeSubs = subscribers.filter(u => u.subscription?.status === 'active');
+  const verifiedRevenue = activeSubs.reduce((acc, u) => acc + (u.subscription?.amountPaid || 0), 0);
 
   const handleBroadcastQuote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +106,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Network Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-white">
           <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1">
             Registered Drivers
@@ -111,15 +117,34 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-xs text-slate-400">Active car downpayment goals</span>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-white">
+        <div className="p-5 rounded-2xl bg-white/5 border border-amber-500/30 text-white">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] uppercase font-bold text-amber-400">
+              TURBO Subscriptions
+            </span>
+            {pendingSubs.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 text-slate-950 animate-pulse">
+                {pendingSubs.length} PENDING
+              </span>
+            )}
+          </div>
+          <div className="text-2xl font-black font-heading text-amber-400">
+            {activeSubs.length} VIPs
+          </div>
+          <span className="text-xs text-amber-300/80 font-medium">
+            Revenue: {formatPKR(verifiedRevenue)}
+          </span>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white/5 border border-emerald-500/30 text-white">
           <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1">
-            Bank Financing Inquiries (Leads)
+            Bank Financing Inquiries
           </span>
           <div className="text-2xl font-black font-heading text-emerald-400">
             {leads.length} Qualified Leads
           </div>
           <span className="text-xs text-emerald-300/80 font-medium">
-            Potential Commission Value: ~₨ {leads.length * 15000} PKR
+            Potential Fees: ~₨ {leads.length * 15000} PKR
           </span>
         </div>
 
@@ -127,13 +152,172 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1">
             Total Capital In Motion
           </span>
-          <div className="text-2xl font-black font-heading text-amber-400">
+          <div className="text-2xl font-black font-heading text-cyan-300">
             {formatPKR(totalSavedAcrossPlatform)}
           </div>
-          <span className="text-xs text-amber-300/80 font-medium">
+          <span className="text-xs text-slate-400 font-medium">
             {formatLacs(totalSavedAcrossPlatform)} saved across network
           </span>
         </div>
+      </div>
+
+      {/* NEW: TURBO Subscription Verification Desk */}
+      <div className="p-5 rounded-2xl bg-white/5 border border-amber-500/40 text-white space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-2">
+                <Zap className="w-4 h-4 fill-current text-amber-400" />
+                <span>TURBO Subscription Verification Desk ({subscribers.length})</span>
+              </h3>
+              {pendingSubs.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 animate-pulse">
+                  {pendingSubs.length} Pending Approval
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Review TID submissions sent to your NayaPay / Raast (<strong>03134216028</strong> - <strong>Danish Muhammad Khan</strong>) and grant TURBO VIP status.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
+              Verified Revenue: {formatPKR(verifiedRevenue)}
+            </span>
+          </div>
+        </div>
+
+        {subscribers.length === 0 ? (
+          <div className="py-6 text-center space-y-2">
+            <div className="w-10 h-10 mx-auto rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+              <Zap className="w-5 h-5 fill-current text-amber-400" />
+            </div>
+            <p className="text-xs font-bold text-slate-200">No subscription upgrade submissions yet</p>
+            <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+              When drivers submit their ₨ 100 transfer TID for verification to Danish Muhammad Khan, they will appear here for 1-click approval.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-slate-400">
+                  <th className="pb-3 font-semibold">Driver</th>
+                  <th className="pb-3 font-semibold">Plan & Fee</th>
+                  <th className="pb-3 font-semibold">Channel</th>
+                  <th className="pb-3 font-semibold">Sender Phone / Name</th>
+                  <th className="pb-3 font-semibold">Transaction ID (TID)</th>
+                  <th className="pb-3 font-semibold">Status</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {subscribers.map((u) => {
+                  const sub = u.subscription!;
+                  const isPending = sub.status === 'pending';
+                  const isActive = sub.status === 'active';
+                  const isRejected = sub.status === 'rejected';
+
+                  return (
+                    <tr key={u.id} className="hover:bg-white/[0.02]">
+                      <td className="py-3 font-bold text-white">
+                        <div>{u.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{u.email}</div>
+                      </td>
+                      <td className="py-3">
+                        <div className="font-semibold text-white capitalize">{sub.planName}</div>
+                        <div className="text-[10px] text-amber-400 font-mono font-bold">₨ {sub.amountPaid}</div>
+                      </td>
+                      <td className="py-3 capitalize text-slate-300">
+                        {sub.paymentMethod === 'vip_pass' ? (
+                          <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">VIP Code</span>
+                        ) : (
+                          <span>{sub.paymentMethod}</span>
+                        )}
+                      </td>
+                      <td className="py-3 text-slate-300">
+                        <div className="font-mono text-white text-[11px]">{sub.senderPhone || '—'}</div>
+                        <div className="text-[10px] text-slate-400">{sub.senderName || u.name}</div>
+                      </td>
+                      <td className="py-3 font-mono font-bold text-amber-300 text-xs">
+                        {sub.trxId}
+                      </td>
+                      <td className="py-3">
+                        {isActive ? (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span>✓ Active VIP</span>
+                          </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                            <span>⏳ Review</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            <span>✕ Rejected</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isPending && (
+                            <>
+                              <button
+                                onClick={() => verifySubscription(u.id, true)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] transition-all cursor-pointer shadow-sm"
+                                title="Verify receipt and grant TURBO VIP"
+                              >
+                                Approve VIP
+                              </button>
+                              <button
+                                onClick={() => verifySubscription(u.id, false, 'TID not found on NayaPay/Raast account statement.')}
+                                className="px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold text-[11px] transition-all cursor-pointer"
+                                title="Reject invalid TID"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {isActive && (
+                            <button
+                              onClick={() => verifySubscription(u.id, false, 'Revoked by Admin')}
+                              className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-300 text-[10px] transition-all cursor-pointer"
+                              title="Revoke subscription"
+                            >
+                              Revoke
+                            </button>
+                          )}
+                          {isRejected && (
+                            <button
+                              onClick={() => verifySubscription(u.id, true)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              Re-Approve
+                            </button>
+                          )}
+                          {sub.senderPhone && (
+                            <button
+                              onClick={() => {
+                                const cleanDigits = sub.senderPhone!.replace(/\D/g, '');
+                                const phone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
+                                const msg = encodeURIComponent(`Salam ${u.name}! Regarding your IGNITION TURBO subscription inquiry (TID: ${sub.trxId})...`);
+                                window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+                              }}
+                              className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all cursor-pointer"
+                              title="Chat with driver on WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* NEW: Auto Financing Inquiries / Bank Leads Roster (MONETIZATION HUB) */}

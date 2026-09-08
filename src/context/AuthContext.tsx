@@ -26,10 +26,13 @@ interface AuthContextType {
       trxId: string;
       senderPhone?: string;
       senderName?: string;
-      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant';
+      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant' | 'vip_pass';
     }
-  ) => { success: boolean; message?: string };
+  ) => { success: boolean; message?: string; isInstant?: boolean };
+  verifySubscription: (userId: string, approved: boolean, reason?: string) => void;
+  redeemVipPass: (code: string) => { success: boolean; message: string };
   cancelPro: () => void;
+  clearSubscription: (userId?: string) => void;
   hasSeenTutorial: boolean;
   completeTutorial: () => void;
   resetTutorial: () => void;
@@ -235,11 +238,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       trxId: string;
       senderPhone?: string;
       senderName?: string;
-      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant';
+      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant' | 'vip_pass';
     }
-  ): { success: boolean; message?: string } => {
+  ): { success: boolean; message?: string; isInstant?: boolean } => {
     if (!currentUser) {
       return { success: false, message: 'Please log in to upgrade to TURBO.' };
+    }
+
+    const cleanTrxId = details.trxId.trim();
+    if (cleanTrxId.length < 6) {
+      return { 
+        success: false, 
+        message: 'Please enter a valid Transaction ID / Reference No. (minimum 6 digits from your receipt).' 
+      };
     }
 
     const now = new Date();
@@ -266,17 +277,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       expiresAt = 'lifetime';
     }
 
+    // Check if this is a VIP Pass / Creator code
+    const isVipPass = ['VIP2026', 'DANISH-VIP', 'TURBO100', 'CREATOR-VIP', 'IGNITION2026'].includes(cleanTrxId.toUpperCase());
+
     const newSub: SubscriptionDetails = {
       tier: 'pro',
       planName: plan,
-      amountPaid,
+      amountPaid: isVipPass ? 0 : amountPaid,
       subscribedAt: now.toISOString(),
       expiresAt,
-      paymentMethod: details.paymentMethod || 'nayapay',
-      trxId: details.trxId.trim() || `TID-${Date.now().toString().slice(-6)}`,
-      senderPhone: details.senderPhone,
-      senderName: details.senderName,
-      status: 'active'
+      paymentMethod: isVipPass ? 'vip_pass' : (details.paymentMethod || 'nayapay'),
+      trxId: cleanTrxId,
+      senderPhone: details.senderPhone?.trim() || undefined,
+      senderName: details.senderName?.trim() || currentUser.name,
+      status: isVipPass ? 'active' : 'pending',
+      verifiedAt: isVipPass ? now.toISOString() : undefined
     };
 
     const updatedUser: User = {
@@ -287,7 +302,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(updatedUser);
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
 
-    return { success: true, message: 'IGNITION TURBO successfully activated! Welcome to the VIP tier.' };
+    if (isVipPass) {
+      return { 
+        success: true, 
+        message: 'VIP Pass confirmed! IGNITION TURBO activated immediately.',
+        isInstant: true 
+      };
+    }
+
+    return { 
+      success: true, 
+      message: 'Transaction ID submitted for verification! Danish Muhammad Khan will verify and unlock your TURBO VIP access.',
+      isInstant: false 
+    };
+  };
+
+  const redeemVipPass = (code: string): { success: boolean; message: string } => {
+    if (!currentUser) {
+      return { success: false, message: 'Please log in to redeem a VIP pass.' };
+    }
+    const clean = code.trim().toUpperCase();
+    const validCodes = ['VIP2026', 'DANISH-VIP', 'TURBO100', 'CREATOR-VIP', 'IGNITION2026'];
+    if (!validCodes.includes(clean)) {
+      return { success: false, message: 'Invalid VIP Passcode or Promo Code.' };
+    }
+
+    const res = upgradeToPro('lifetime', {
+      trxId: clean,
+      paymentMethod: 'vip_pass',
+      senderName: currentUser.name
+    });
+
+    return {
+      success: res.success,
+      message: res.message || 'VIP Pass confirmed! IGNITION TURBO activated.'
+    };
+  };
+
+  const verifySubscription = (userId: string, approved: boolean, reason?: string) => {
+    const now = new Date().toISOString();
+    setUsers(prev => prev.map(u => {
+      if (u.id !== userId || !u.subscription) return u;
+      const updatedSub: SubscriptionDetails = {
+        ...u.subscription,
+        status: approved ? 'active' : 'rejected',
+        verifiedAt: approved ? now : undefined,
+        rejectionReason: approved ? undefined : (reason || 'Transaction ID could not be verified on NayaPay/Raast')
+      };
+      return { ...u, subscription: updatedSub };
+    }));
+
+    if (currentUser?.id === userId && currentUser.subscription) {
+      const updatedSub: SubscriptionDetails = {
+        ...currentUser.subscription,
+        status: approved ? 'active' : 'rejected',
+        verifiedAt: approved ? now : undefined,
+        rejectionReason: approved ? undefined : (reason || 'Transaction ID could not be verified on NayaPay/Raast')
+      };
+      setCurrentUser({ ...currentUser, subscription: updatedSub });
+    }
   };
 
   const cancelPro = () => {
@@ -298,6 +371,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setCurrentUser(updatedUser);
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+  };
+
+  const clearSubscription = (userId?: string) => {
+    const targetId = userId || currentUser?.id;
+    if (!targetId) return;
+    setUsers(prev => prev.map(u => u.id === targetId ? { ...u, subscription: undefined } : u));
+    if (currentUser?.id === targetId) {
+      setCurrentUser({ ...currentUser, subscription: undefined });
+    }
   };
 
   return (
@@ -316,7 +398,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isPro,
         subscription,
         upgradeToPro,
+        verifySubscription,
+        redeemVipPass,
         cancelPro,
+        clearSubscription,
         hasSeenTutorial,
         completeTutorial,
         resetTutorial
