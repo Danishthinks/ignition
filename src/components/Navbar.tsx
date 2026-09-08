@@ -13,7 +13,8 @@ import {
   BookOpen,
   User as UserIcon,
   LogOut,
-  Crown
+  Crown,
+  Calculator
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatLacs } from '../utils/formatters';
@@ -24,6 +25,7 @@ interface NavbarProps {
   onOpenImpulseModal: () => void;
   onOpenAuthModal: (tab?: 'login' | 'signup') => void;
   onOpenTutorialModal: () => void;
+  onOpenEmiCalculator?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenImpulseModal,
   onOpenAuthModal,
   onOpenTutorialModal,
+  onOpenEmiCalculator,
 }) => {
   const { 
     isDarkMode, 
@@ -96,12 +99,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             onClick={onOpenImpulseModal}
-            className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+            className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
             title="Calculate how much an impulse purchase delays your dream car"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Impulse Stopper</span>
           </motion.button>
+
+          {/* Standalone EMI Calculator Button */}
+          {onOpenEmiCalculator && (
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onOpenEmiCalculator}
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
+              title="Estimate monthly bank lease installments across tenures"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">EMI Calculator</span>
+            </motion.button>
+          )}
 
           {/* Rev & Provoke Button */}
           <motion.button

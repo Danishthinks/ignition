@@ -1,14 +1,15 @@
 import React from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { formatLacs } from '../utils/formatters';
-import { Building2, ArrowRight, ShieldCheck, Percent, Sparkles } from 'lucide-react';
+import { Building2, ArrowRight, ShieldCheck, Percent, Sparkles, Calculator } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface FinancingBannerProps {
   onOpenInquiry: () => void;
+  onOpenEmiCalculator?: () => void;
 }
 
-export const FinancingBanner: React.FC<FinancingBannerProps> = ({ onOpenInquiry }) => {
+export const FinancingBanner: React.FC<FinancingBannerProps> = ({ onOpenInquiry, onOpenEmiCalculator }) => {
   const { carGoal } = useFinance();
 
   return (
@@ -42,15 +43,30 @@ export const FinancingBanner: React.FC<FinancingBannerProps> = ({ onOpenInquiry 
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={onOpenInquiry}
-          className="self-start md:self-auto flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 transition-all shrink-0"
-        >
-          <span>Check Financing Eligibility</span>
-          <ArrowRight className="w-4 h-4" />
-        </motion.button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto shrink-0">
+          {onOpenEmiCalculator && (
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onOpenEmiCalculator}
+              className="flex items-center space-x-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-emerald-300 font-bold text-xs border border-emerald-500/30 transition-all cursor-pointer"
+              title="Estimate monthly installments across tenures"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-400" />
+              <span>EMI Calculator</span>
+            </motion.button>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onOpenInquiry}
+            className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+          >
+            <span>Check Financing Eligibility</span>
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

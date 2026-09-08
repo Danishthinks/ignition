@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   MessageSquare,
   Sparkles,
-  Clock
+  Clock,
+  ShieldAlert
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getCarPresetByName, calculateAutoEMI } from '../utils/carPresets';
@@ -439,9 +440,12 @@ _Sent via IGNITION First Car Finance Tracker_`;
                   </div>
                 </div>
 
-                <p className="text-[9px] text-slate-400 leading-tight mt-1.5 pt-1.5 border-t border-white/5">
-                  *Estimated based on standard Pakistani auto lease terms (~19% p.a. markup + comprehensive insurance). Final installment will be set by the bank Relationship Officer.
-                </p>
+                <div className="mt-2 pt-2 border-t border-white/10 flex items-start space-x-1.5 text-[9.5px] text-amber-300/90 leading-relaxed">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Disclaimer:</strong> Estimated installments are preliminary indicators based on benchmark rates (~18–20% p.a. + takaful). Actual monthly installments will be officially calculated by the financing bank upon document review, adding processing fees and taxes, which vary from bank to bank.
+                  </span>
+                </div>
               </div>
             </div>
 

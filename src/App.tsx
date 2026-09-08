@@ -6,6 +6,7 @@ import { MotivationBanner } from './components/MotivationBanner';
 import { CarGoalHero } from './components/CarGoalHero';
 import { FinancingBanner } from './components/FinancingBanner';
 import { FinancingInquiryModal } from './components/FinancingInquiryModal';
+import { EmiCalculatorModal } from './components/EmiCalculatorModal';
 import { MilestonesRoadmap } from './components/MilestonesRoadmap';
 import { FinancialSummary } from './components/FinancialSummary';
 import { AnalyticsView } from './components/AnalyticsView';
@@ -34,6 +35,7 @@ const MainAppLayout: React.FC = () => {
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
   const [isFinancingModalOpen, setIsFinancingModalOpen] = useState(false);
+  const [isEmiModalOpen, setIsEmiModalOpen] = useState(false);
 
   // Secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A) or URL hash #creator
   useEffect(() => {
@@ -101,6 +103,7 @@ const MainAppLayout: React.FC = () => {
         onOpenTransactionModal={() => handleOpenTransaction('car_deposit')}
         onOpenCarModal={() => setIsCarModalOpen(true)}
         onOpenImpulseModal={() => setIsImpulseModalOpen(true)}
+        onOpenEmiCalculator={() => setIsEmiModalOpen(true)}
         onOpenAuthModal={(tab) => {
           setAuthModalTab(tab || 'signup');
           setIsAuthModalOpen(true);
@@ -149,7 +152,10 @@ const MainAppLayout: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.15 }}
             >
-              <FinancingBanner onOpenInquiry={() => setIsFinancingModalOpen(true)} />
+              <FinancingBanner 
+                onOpenInquiry={() => setIsFinancingModalOpen(true)} 
+                onOpenEmiCalculator={() => setIsEmiModalOpen(true)}
+              />
             </motion.div>
 
             {/* 4-Stage Milestones Roadmap */}
@@ -218,6 +224,16 @@ const MainAppLayout: React.FC = () => {
       <FinancingInquiryModal
         isOpen={isFinancingModalOpen}
         onClose={() => setIsFinancingModalOpen(false)}
+      />
+
+      {/* Standalone Auto Lease EMI Calculator Modal */}
+      <EmiCalculatorModal
+        isOpen={isEmiModalOpen}
+        onClose={() => setIsEmiModalOpen(false)}
+        onOpenFinancingInquiry={() => {
+          setIsEmiModalOpen(false);
+          setIsFinancingModalOpen(true);
+        }}
       />
 
       <AuthModal
