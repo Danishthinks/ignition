@@ -30,6 +30,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PAKISTANI_CAR_PRESETS, getCarPresetByName } from '../utils/carPresets';
 
 const OFFICIAL_SUPPORT_WHATSAPP = '923134216028';
 const DISPLAY_SUPPORT_WHATSAPP = '+92 313 4216028';
@@ -37,8 +38,6 @@ const DISPLAY_SUPPORT_WHATSAPP = '+92 313 4216028';
 interface LandingAuthPageProps {
   onOpenCreatorModal: () => void;
 }
-
-import { PAKISTANI_CAR_PRESETS, getCarPresetByName } from '../utils/carPresets';
 
 const CAR_OPTIONS = PAKISTANI_CAR_PRESETS.map((c) => c.name);
 

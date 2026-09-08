@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext';
 import { getRandomQuote } from '../utils/quotes';
 import { soundFx } from '../utils/audio';
 import confetti from 'canvas-confetti';
+import { getCarPresetByName } from '../utils/carPresets';
 
 interface FinanceContextType {
   carGoal: CarGoal;
@@ -34,8 +35,6 @@ interface FinanceContextType {
   toggleSound: () => void;
   triggerCelebration: () => void;
 }
-
-import { getCarPresetByName } from '../utils/carPresets';
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
