@@ -6,7 +6,11 @@ import {
   Mail, 
   Car, 
   Flame,
-  Wallet
+  Wallet,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldAlert
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatInputCommas, parseInputCommas, formatLacs } from '../utils/formatters';
@@ -24,16 +28,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
   React.useEffect(() => {
     if (isOpen) {
       setTab(initialTab);
+      setLoginError('');
+      setSignupError('');
     }
   }, [isOpen, initialTab]);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
   // Signup state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [signupError, setSignupError] = useState('');
   // Start with empty string so NO annoying leading "0" exists
   const [startingBalanceStr, setStartingBalanceStr] = useState<string>('');
   const [carName, setCarName] = useState('Suzuki Alto VXR');
@@ -44,28 +55,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
     e.preventDefault();
     setLoginError('');
     if (!loginEmail.trim()) return;
-    const success = login(loginEmail.trim());
-    if (success) {
+    const res = login(loginEmail.trim(), loginPassword);
+    if (res.success) {
       onClose();
     } else {
-      setLoginError('No driver account found with this email. Create your driver account below.');
+      setLoginError(res.message || 'No driver account found with this email. Create your driver account below.');
     }
   };
 
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSignupError('');
     if (!name.trim() || !email.trim()) return;
+
+    if (password.length < 6) {
+      setSignupError('Password must be at least 6 characters for security.');
+      return;
+    }
 
     const numericBalance = parseInputCommas(startingBalanceStr);
 
-    signup({
+    const res = signup({
       name: name.trim(),
       email: email.trim(),
+      password: password,
       startingBalance: numericBalance,
       carName: carName.trim() || 'Suzuki Alto VXR'
     });
 
-    onClose();
+    if (res.success) {
+      onClose();
+    } else {
+      setSignupError(res.message || 'Could not create driver account.');
+    }
   };
 
   const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,10 +175,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
               </div>
             </div>
 
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 text-sm text-white outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                >
+                  {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             {loginError && (
-              <p className="text-xs text-red-400 font-medium">
-                {loginError}
-              </p>
+              <motion.div 
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center space-x-2"
+              >
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{loginError}</span>
+              </motion.div>
             )}
 
             <button
@@ -212,6 +263,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
               </div>
             </div>
 
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type={showSignupPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 text-sm text-white outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSignupPassword(!showSignupPassword)}
+                  className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                >
+                  {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             {/* Current Real Cash in Hand with Auto-Comma Format */}
             <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 space-y-3">
               <div>
@@ -260,6 +336,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                 </div>
               </div>
             </div>
+
+            {signupError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center space-x-2"
+              >
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{signupError}</span>
+              </motion.div>
+            )}
 
             <button
               type="submit"

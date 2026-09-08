@@ -4,13 +4,14 @@ import type { User, UserRole } from '../types/auth';
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (email: string) => boolean;
+  login: (email: string, password?: string) => { success: boolean; message?: string };
   signup: (userData: {
     name: string;
     email: string;
+    password?: string;
     startingBalance?: number;
     carName?: string;
-  }) => User;
+  }) => { success: boolean; user?: User; message?: string };
   logout: () => void;
   switchDemoDriver: () => void;
   unlockCreatorMode: (passcode: string) => boolean;
@@ -83,34 +84,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  // Regular user login - public
-  const login = (email: string): boolean => {
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (found) {
-      // If someone tries logging into creator via standard form, require passcode via creator portal
-      if (found.role === 'admin') {
-        return false;
-      }
-      setCurrentUser(found);
-      return true;
+  // Regular user login with password authentication
+  const login = (email: string, password?: string): { success: boolean; message?: string } => {
+    const cleanEmail = email.trim().toLowerCase();
+    const found = users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (!found) {
+      return { success: false, message: 'No driver account found with this email. Please create an account.' };
     }
-    return false;
+
+    if (found.role === 'admin') {
+      return { success: false, message: 'Creator access requires passcode via the Creator Terminal (Ctrl+Shift+A).' };
+    }
+
+    // Verify password if set on account
+    if (found.password) {
+      if (!password || found.password !== password.trim()) {
+        return { success: false, message: 'Incorrect password. Please verify your password and try again.' };
+      }
+    }
+
+    setCurrentUser(found);
+    return { success: true };
   };
 
-  // Regular user signup - ALWAYS creates role 'driver'
+  // Regular user signup - strictly role 'driver' with password protection
   const signup = (userData: {
     name: string;
     email: string;
+    password?: string;
     startingBalance?: number;
     carName?: string;
-  }): User => {
+  }): { success: boolean; user?: User; message?: string } => {
+    const cleanEmail = userData.email.trim().toLowerCase();
+    const existing = users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      return { 
+        success: false, 
+        message: 'An account with this email already exists. Please sign in instead.' 
+      };
+    }
+
     const newUser: User = {
       id: 'driver-' + Date.now(),
-      name: userData.name,
-      email: userData.email,
-      role: 'driver', // Strictly driver
+      name: userData.name.trim(),
+      email: cleanEmail,
+      password: userData.password?.trim(),
+      role: 'driver',
       startingBalance: userData.startingBalance ?? 0,
-      targetCarName: userData.carName ?? 'Suzuki Alto VXR',
+      targetCarName: userData.carName?.trim() || 'Suzuki Alto VXR',
       createdAt: new Date().toISOString(),
       avatar: '🏎️'
     };
@@ -119,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(newUser);
     setHasSeenTutorial(true);
     localStorage.setItem('ignition_tutorial_seen', 'true');
-    return newUser;
+    return { success: true, user: newUser };
   };
 
   const logout = () => {
