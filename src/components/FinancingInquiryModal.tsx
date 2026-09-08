@@ -7,14 +7,16 @@ import {
   Building2, 
   Phone, 
   MapPin, 
-  Briefcase, 
-  DollarSign, 
   CheckCircle2, 
-  Car, 
   Send,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Official WhatsApp Lead Number for the Creator / Auto Financing Desk
+export const OFFICIAL_WHATSAPP_NUMBER = '923134216028';
+export const DISPLAY_WHATSAPP_NUMBER = '+92 313 4216028';
 
 interface FinancingInquiryModalProps {
   isOpen: boolean;
@@ -101,7 +103,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
     leads.unshift(newLead);
     localStorage.setItem('ignition_financing_leads', JSON.stringify(leads));
 
-    // Construct professional WhatsApp pre-filled text message
+    // Construct professional WhatsApp pre-filled text message directed to 03134216028
     const message = `*🏎️ IGNITION Auto Financing Lead Submission*
 ---------------------------------------
 *Driver Name:* ${newLead.fullName}
@@ -116,9 +118,9 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
 ---------------------------------------
 _Sent via IGNITION First Car Finance Tracker_`;
 
-    // Open WhatsApp Web or Mobile app
+    // Direct link to the Creator's WhatsApp: +923134216028
     const encodedMsg = encodeURIComponent(message);
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${OFFICIAL_WHATSAPP_NUMBER}&text=${encodedMsg}`;
     window.open(whatsappUrl, '_blank');
 
     setSubmitted(true);
@@ -148,7 +150,7 @@ _Sent via IGNITION First Car Finance Tracker_`;
         </button>
 
         {/* Header */}
-        <div className="flex items-center space-x-3 mb-5">
+        <div className="flex items-center space-x-3 mb-4">
           <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-md">
             <Building2 className="w-6 h-6" />
           </div>
@@ -162,7 +164,7 @@ _Sent via IGNITION First Car Finance Tracker_`;
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Get matched with Islamic Ijarah & Auto Lease partners in Pakistan.
+              Direct connection to financing desk via WhatsApp ({DISPLAY_WHATSAPP_NUMBER})
             </p>
           </div>
         </div>
@@ -189,10 +191,10 @@ _Sent via IGNITION First Car Finance Tracker_`;
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h4 className="text-lg font-heading font-bold text-white">
-              Inquiry Dispatched via WhatsApp!
+              WhatsApp Chat Initialized!
             </h4>
             <p className="text-xs text-slate-300 max-w-sm mx-auto">
-              Your car financing details have been formatted. A financing advisor or bank partner will review your downpayment readiness.
+              Your inquiry has been routed to <strong>{DISPLAY_WHATSAPP_NUMBER}</strong>. Check your WhatsApp window to send the formatted message.
             </p>
           </motion.div>
         ) : (
@@ -214,7 +216,7 @@ _Sent via IGNITION First Car Finance Tracker_`;
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  WhatsApp Number
+                  Your WhatsApp Number
                 </label>
                 <div className="relative">
                   <Phone className="w-3.5 h-3.5 absolute left-3.5 top-3 text-emerald-400" />
@@ -307,13 +309,13 @@ _Sent via IGNITION First Car Finance Tracker_`;
                 className="w-full flex items-center justify-center space-x-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm transition-all shadow-lg shadow-emerald-500/25"
               >
                 <Send className="w-4 h-4" />
-                <span>Submit Inquiry & Connect on WhatsApp</span>
+                <span>Send to WhatsApp ({DISPLAY_WHATSAPP_NUMBER})</span>
               </button>
             </div>
 
             <div className="flex items-center justify-center space-x-1 text-[10px] text-slate-400 text-center">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Your details remain private and are only shared with authorized auto-lease agents.</span>
+              <span>Directly opens WhatsApp chat with the Ignition Auto Financing Desk ({DISPLAY_WHATSAPP_NUMBER}).</span>
             </div>
           </form>
         )}
