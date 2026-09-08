@@ -25,7 +25,8 @@ import {
   KeyRound,
   XCircle,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -239,6 +240,9 @@ _As-Salamu Alaykum Danish Bhai! I have transferred the payment via NayaPay/Raast
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950 uppercase shadow-sm">
                 PRO DRIVER PASS
+              </span>
+              <span className="text-[11px] text-slate-400/75 font-mono">
+                Acct: {NAYAPAY_ACCOUNT_NUMBER}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -554,6 +558,22 @@ _As-Salamu Alaykum Danish Bhai! I have transferred the payment via NayaPay/Raast
                   {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   <span>{copied ? 'Copied!' : 'Copy Number'}</span>
                 </button>
+              </div>
+
+              {/* Commercial Bank Transfer Details in Faded / Subtle Styling */}
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-300">
+                  <span className="flex items-center space-x-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Transferring from a Bank App (Meezan, Alfalah, HBL, UBL)?</span>
+                  </span>
+                  <span className="text-[9px] text-slate-400/70 font-mono">
+                    Acct: {NAYAPAY_ACCOUNT_NUMBER}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400/90 leading-relaxed">
+                  In your Bank App &rarr; Select <strong className="text-slate-200">Other Bank Transfer</strong> &rarr; Bank: <strong className="text-emerald-400">NayaPay</strong> &rarr; Account Number: <span className="font-mono text-amber-300 font-bold">{NAYAPAY_ACCOUNT_NUMBER}</span> (Title: <span className="text-slate-300">{NAYAPAY_ACCOUNT_TITLE}</span>). Or select <strong className="text-slate-200">Raast Transfer</strong> using ID: <span className="font-mono text-amber-300 font-bold">{NAYAPAY_ACCOUNT_NUMBER}</span>.
+                </p>
               </div>
 
               <p className="text-[10px] text-slate-400 leading-relaxed">

@@ -265,18 +265,40 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
               </div>
             </div>
 
+            {/* Basic vs TURBO Pro Plans Preview */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-slate-900/40 to-amber-500/10 border border-slate-200 dark:border-white/10 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                <span className="text-cyan-600 dark:text-cyan-400 font-bold flex items-center space-x-1.5 shrink-0">
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Free Basic Vault:</span>
+                </span>
+                <span className="text-slate-600 dark:text-slate-300 text-[11px]">
+                  Downpayment Tracker, Speedometer Gauge & Roadmap
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] border-t border-slate-200 dark:border-white/10 pt-2">
+                <span className="text-amber-500 font-bold flex items-center space-x-1.5 shrink-0">
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>TURBO VIP (₨ 100/mo):</span>
+                </span>
+                <span className="text-slate-600 dark:text-slate-300 text-[11px]">
+                  Priority RO Bank Queue, Credit Dossier & Car Compare
+                </span>
+              </div>
+            </div>
+
             {/* Trust badge */}
-            <div className="flex items-center space-x-4 pt-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center space-x-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span>100% Free Forever</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Free Core Vault + ₨ 100 Pro Tier</span>
               </div>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <div className="flex items-center space-x-1.5">
                 <Lock className="w-4 h-4 text-cyan-500" />
                 <span>Isolated Private Vault</span>
               </div>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Calibrated for Pakistan</span>
             </div>
           </motion.div>

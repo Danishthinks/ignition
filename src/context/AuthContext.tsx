@@ -30,6 +30,7 @@ interface AuthContextType {
     }
   ) => { success: boolean; message?: string; isInstant?: boolean };
   verifySubscription: (userId: string, approved: boolean, reason?: string) => void;
+  extendSubscription: (userId: string, days?: number) => void;
   redeemVipPass: (code: string) => { success: boolean; message: string };
   cancelPro: () => void;
   clearSubscription: (userId?: string) => void;
@@ -51,6 +52,59 @@ const CREATOR_ACCOUNT: User = {
 };
 
 const INITIAL_USERS: User[] = [CREATOR_ACCOUNT];
+
+export interface SubscriptionTimelineInfo {
+  text: string;
+  daysRemaining?: number;
+  isExpired: boolean;
+  isLifetime: boolean;
+  formattedExpiry: string;
+}
+
+export const isSubscriptionActive = (sub?: SubscriptionDetails | null): boolean => {
+  if (!sub || sub.status !== 'active') return false;
+  if (sub.expiresAt === 'lifetime') return true;
+  const expiry = new Date(sub.expiresAt).getTime();
+  return !isNaN(expiry) && expiry > Date.now();
+};
+
+export const getSubscriptionTimeline = (sub?: SubscriptionDetails | null): SubscriptionTimelineInfo => {
+  if (!sub) {
+    return { text: 'No pass', isExpired: true, isLifetime: false, formattedExpiry: '—' };
+  }
+  if (sub.expiresAt === 'lifetime') {
+    return { text: '👑 Lifetime Pass (Never expires)', isExpired: false, isLifetime: true, formattedExpiry: 'Lifetime' };
+  }
+  const expTime = new Date(sub.expiresAt).getTime();
+  if (isNaN(expTime)) {
+    return { text: 'Invalid expiration date', isExpired: true, isLifetime: false, formattedExpiry: '—' };
+  }
+  const formattedExpiry = new Date(sub.expiresAt).toLocaleDateString('en-PK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+  const diffMs = expTime - Date.now();
+
+  if (diffMs <= 0) {
+    return {
+      text: `Expired on ${formattedExpiry} (Auto-Revoked)`,
+      daysRemaining: 0,
+      isExpired: true,
+      isLifetime: false,
+      formattedExpiry
+    };
+  }
+
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return {
+    text: `${days} day${days === 1 ? '' : 's'} remaining (until ${formattedExpiry})`,
+    daysRemaining: days,
+    isExpired: false,
+    isLifetime: false,
+    formattedExpiry
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
@@ -229,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isCreator = currentUser?.role === 'admin';
-  const isPro = isCreator || currentUser?.subscription?.status === 'active';
+  const isPro = isCreator || isSubscriptionActive(currentUser?.subscription);
   const subscription = currentUser?.subscription || null;
 
   const upgradeToPro = (
@@ -340,24 +394,98 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifySubscription = (userId: string, approved: boolean, reason?: string) => {
-    const now = new Date().toISOString();
+    const now = new Date();
     setUsers(prev => prev.map(u => {
       if (u.id !== userId || !u.subscription) return u;
+      
+      let expiresAt = u.subscription.expiresAt;
+      if (approved) {
+        const plan = u.subscription.planName;
+        if (plan === 'monthly') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 30);
+          expiresAt = exp.toISOString();
+        } else if (plan === 'quarterly') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 90);
+          expiresAt = exp.toISOString();
+        } else if (plan === 'annual') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 365);
+          expiresAt = exp.toISOString();
+        } else {
+          expiresAt = 'lifetime';
+        }
+      }
+
       const updatedSub: SubscriptionDetails = {
         ...u.subscription,
         status: approved ? 'active' : 'rejected',
-        verifiedAt: approved ? now : undefined,
+        verifiedAt: approved ? now.toISOString() : undefined,
+        expiresAt: approved ? expiresAt : u.subscription.expiresAt,
         rejectionReason: approved ? undefined : (reason || 'Transaction ID could not be verified on NayaPay/Raast')
       };
       return { ...u, subscription: updatedSub };
     }));
 
     if (currentUser?.id === userId && currentUser.subscription) {
+      let expiresAt = currentUser.subscription.expiresAt;
+      if (approved) {
+        const plan = currentUser.subscription.planName;
+        if (plan === 'monthly') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 30);
+          expiresAt = exp.toISOString();
+        } else if (plan === 'quarterly') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 90);
+          expiresAt = exp.toISOString();
+        } else if (plan === 'annual') {
+          const exp = new Date(now);
+          exp.setDate(exp.getDate() + 365);
+          expiresAt = exp.toISOString();
+        } else {
+          expiresAt = 'lifetime';
+        }
+      }
+
       const updatedSub: SubscriptionDetails = {
         ...currentUser.subscription,
         status: approved ? 'active' : 'rejected',
-        verifiedAt: approved ? now : undefined,
+        verifiedAt: approved ? now.toISOString() : undefined,
+        expiresAt: approved ? expiresAt : currentUser.subscription.expiresAt,
         rejectionReason: approved ? undefined : (reason || 'Transaction ID could not be verified on NayaPay/Raast')
+      };
+      setCurrentUser({ ...currentUser, subscription: updatedSub });
+    }
+  };
+
+  const extendSubscription = (userId: string, days: number = 30) => {
+    setUsers(prev => prev.map(u => {
+      if (u.id !== userId || !u.subscription) return u;
+      const baseDate = u.subscription.expiresAt !== 'lifetime' && new Date(u.subscription.expiresAt) > new Date()
+        ? new Date(u.subscription.expiresAt)
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + days);
+      const updatedSub: SubscriptionDetails = {
+        ...u.subscription,
+        status: 'active',
+        expiresAt: baseDate.toISOString(),
+        verifiedAt: new Date().toISOString()
+      };
+      return { ...u, subscription: updatedSub };
+    }));
+
+    if (currentUser?.id === userId && currentUser.subscription) {
+      const baseDate = currentUser.subscription.expiresAt !== 'lifetime' && new Date(currentUser.subscription.expiresAt) > new Date()
+        ? new Date(currentUser.subscription.expiresAt)
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + days);
+      const updatedSub: SubscriptionDetails = {
+        ...currentUser.subscription,
+        status: 'active',
+        expiresAt: baseDate.toISOString(),
+        verifiedAt: new Date().toISOString()
       };
       setCurrentUser({ ...currentUser, subscription: updatedSub });
     }
@@ -399,6 +527,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscription,
         upgradeToPro,
         verifySubscription,
+        extendSubscription,
         redeemVipPass,
         cancelPro,
         clearSubscription,

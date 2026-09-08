@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, getSubscriptionTimeline, isSubscriptionActive } from '../context/AuthContext';
 import { formatPKR, formatLacs, formatDate } from '../utils/formatters';
 import type { FinancingLead } from './FinancingInquiryModal';
 import { 
@@ -12,11 +12,25 @@ import {
   Phone,
   MessageCircle,
   Clock,
-  Car
+  Car,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  Sparkles,
+  Calendar,
+  X
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { users, exitCreatorMode, verifySubscription } = useAuth();
+  const { users, exitCreatorMode, verifySubscription, extendSubscription } = useAuth();
+  
+  const [approvalToast, setApprovalToast] = useState<{
+    driverName: string;
+    planName: string;
+    phone?: string;
+    amount: number;
+    expiresAt?: string;
+  } | null>(null);
 
   const [leads, setLeads] = useState<FinancingLead[]>(() => {
     const saved = localStorage.getItem('ignition_financing_leads');
@@ -69,6 +83,67 @@ export const AdminDashboard: React.FC = () => {
     const details = tenure && emi ? ` (${tenure} yrs tenure, est. installment ~${formatPKR(emi)}/mo)` : '';
     const msg = encodeURIComponent(`Salam ${name}! Regarding your car financing inquiry for ${car}${details} on IGNITION, I can help you process your pre-approval.`);
     window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${msg}`, '_blank');
+  };
+
+  const handleApproveVip = (
+    userId: string,
+    driverName: string,
+    planName: string,
+    phone?: string,
+    amount: number = 100
+  ) => {
+    verifySubscription(userId, true);
+    const target = users.find(u => u.id === userId);
+    setApprovalToast({
+      driverName,
+      planName,
+      phone,
+      amount,
+      expiresAt: target?.subscription?.expiresAt
+    });
+  };
+
+  const openWhatsAppVipCongratulations = (
+    phone: string,
+    driverName: string,
+    planName: string,
+    amount: number,
+    expiresAt?: string
+  ) => {
+    const cleanDigits = phone.replace(/\D/g, '');
+    const intlPhone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
+
+    const timeline = getSubscriptionTimeline({
+      tier: 'pro',
+      planName: planName as any,
+      amountPaid: amount,
+      subscribedAt: '',
+      expiresAt: expiresAt || 'lifetime',
+      paymentMethod: 'nayapay',
+      trxId: '',
+      status: 'active'
+    });
+
+    const msg = `*🎉 As-Salamu Alaykum ${driverName} Bhai! Mubarak Ho! 🏎️⚡*
+---------------------------------------
+Your payment of *₨ ${amount}* for *IGNITION TURBO (${planName.toUpperCase()})* has been verified by Danish Muhammad Khan!
+
+*👑 YOUR TURBO VIP PRIVILEGES ARE NOW ACTIVE:*
+✅ 70% Bank Financing / Meezan Ijarah Priority RO Queue
+✅ 1-Click Printable Bank-Ready Credit Dossier
+✅ Side-by-Side Multi-Car Comparison & Resale Engine
+✅ Full CSV / Excel Financial Ledger Export
+
+⏳ *Access Validity:* ${timeline.text}
+
+Log in to your driver cockpit now:
+https://danishthinks.github.io/ignition/
+
+_Drive safe and keep turning your dream into horsepower!_
+— *Danish Muhammad Khan* (Creator, IGNITION)`;
+
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${encoded}`, '_blank');
   };
 
   return (
@@ -163,6 +238,47 @@ export const AdminDashboard: React.FC = () => {
 
       {/* NEW: TURBO Subscription Verification Desk */}
       <div className="p-5 rounded-2xl bg-white/5 border border-amber-500/40 text-white space-y-4">
+        {/* Celebratory Approval Banner */}
+        {approvalToast && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/25 via-amber-500/20 to-emerald-500/25 border border-emerald-500/50 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl shadow-emerald-500/10">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/30 text-lg">
+                🎉
+              </div>
+              <div>
+                <div className="text-sm font-black text-white flex items-center space-x-2">
+                  <span>VIP Status Approved! Mubarak to {approvalToast.driverName}!</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950 uppercase">
+                    TURBO VIP ACTIVATED
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-300 mt-0.5">
+                  Plan: <strong>{approvalToast.planName.toUpperCase()}</strong>. Access is unlocked. Access will automatically renew or expire based on plan duration.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 self-start sm:self-auto">
+              {approvalToast.phone && (
+                <button
+                  type="button"
+                  onClick={() => openWhatsAppVipCongratulations(approvalToast.phone!, approvalToast.driverName, approvalToast.planName, approvalToast.amount, approvalToast.expiresAt)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Send Mubarak Ho on WhatsApp</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setApprovalToast(null)}
+                className="text-xs text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <div className="flex items-center space-x-2">
@@ -177,7 +293,7 @@ export const AdminDashboard: React.FC = () => {
               )}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Review TID submissions sent to your NayaPay / Raast (<strong>03134216028</strong> - <strong>Danish Muhammad Khan</strong>) and grant TURBO VIP status.
+              Review TID submissions sent to your NayaPay / Raast (<strong>03134216028</strong> - <strong>Danish Muhammad Khan</strong>). VIP expires automatically based on plan duration.
             </p>
           </div>
 
@@ -205,9 +321,9 @@ export const AdminDashboard: React.FC = () => {
                 <tr className="border-b border-white/10 text-slate-400">
                   <th className="pb-3 font-semibold">Driver</th>
                   <th className="pb-3 font-semibold">Plan & Fee</th>
-                  <th className="pb-3 font-semibold">Channel</th>
-                  <th className="pb-3 font-semibold">Sender Phone / Name</th>
-                  <th className="pb-3 font-semibold">Transaction ID (TID)</th>
+                  <th className="pb-3 font-semibold">Channel & TID</th>
+                  <th className="pb-3 font-semibold">Sender Phone</th>
+                  <th className="pb-3 font-semibold">Timeline (Auto-Revoke)</th>
                   <th className="pb-3 font-semibold">Status</th>
                   <th className="pb-3 font-semibold text-right">Actions</th>
                 </tr>
@@ -215,42 +331,89 @@ export const AdminDashboard: React.FC = () => {
               <tbody className="divide-y divide-white/5">
                 {subscribers.map((u) => {
                   const sub = u.subscription!;
+                  const timeline = getSubscriptionTimeline(sub);
                   const isPending = sub.status === 'pending';
-                  const isActive = sub.status === 'active';
+                  const isActive = isSubscriptionActive(sub);
+                  const isExpired = sub.status === 'active' && !isActive;
                   const isRejected = sub.status === 'rejected';
 
                   return (
                     <tr key={u.id} className="hover:bg-white/[0.02]">
                       <td className="py-3 font-bold text-white">
-                        <div>{u.name}</div>
+                        <div className="flex items-center space-x-2">
+                          <span>{u.name}</span>
+                          {isActive && (
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 shadow-md shadow-amber-500/30 border border-yellow-300">
+                              <Crown className="w-2.5 h-2.5 fill-current" />
+                              <span>TURBO VIP</span>
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-400 font-mono">{u.email}</div>
                       </td>
                       <td className="py-3">
                         <div className="font-semibold text-white capitalize">{sub.planName}</div>
                         <div className="text-[10px] text-amber-400 font-mono font-bold">₨ {sub.amountPaid}</div>
                       </td>
-                      <td className="py-3 capitalize text-slate-300">
-                        {sub.paymentMethod === 'vip_pass' ? (
-                          <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">VIP Code</span>
-                        ) : (
-                          <span>{sub.paymentMethod}</span>
-                        )}
+                      <td className="py-3">
+                        <div className="capitalize text-slate-300 font-semibold text-[11px]">
+                          {sub.paymentMethod === 'vip_pass' ? 'VIP Voucher' : sub.paymentMethod}
+                        </div>
+                        <div className="font-mono font-bold text-amber-300 text-xs">
+                          {sub.trxId}
+                        </div>
                       </td>
                       <td className="py-3 text-slate-300">
                         <div className="font-mono text-white text-[11px]">{sub.senderPhone || '—'}</div>
                         <div className="text-[10px] text-slate-400">{sub.senderName || u.name}</div>
                       </td>
-                      <td className="py-3 font-mono font-bold text-amber-300 text-xs">
-                        {sub.trxId}
+                      <td className="py-3">
+                        {isActive ? (
+                          <div>
+                            <div className="font-bold text-emerald-400 text-[11px] flex items-center space-x-1">
+                              <Calendar className="w-3 h-3 text-emerald-400" />
+                              <span>{timeline.text}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              Expires: <span className="text-white font-mono">{timeline.formattedExpiry}</span>
+                            </div>
+                          </div>
+                        ) : isExpired ? (
+                          <div>
+                            <div className="font-bold text-rose-400 text-[11px]">
+                              ⚠️ Auto-Revoked (Expired)
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              Expired on: {timeline.formattedExpiry}
+                            </div>
+                          </div>
+                        ) : isPending ? (
+                          <div>
+                            <div className="text-[11px] font-semibold text-amber-400">
+                              {sub.planName === 'lifetime' ? 'Lifetime Pass' : sub.planName === 'annual' ? '365 Days' : sub.planName === 'quarterly' ? '90 Days' : '30 Days'}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              Starts upon approval
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-rose-400 font-semibold">
+                            Verification Rejected
+                          </div>
+                        )}
                       </td>
                       <td className="py-3">
                         {isActive ? (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            <span>✓ Active VIP</span>
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20">
+                            <span>👑 TURBO VIP</span>
                           </span>
                         ) : isPending ? (
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
                             <span>⏳ Review</span>
+                          </span>
+                        ) : isExpired ? (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            <span>Expired</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
@@ -263,7 +426,7 @@ export const AdminDashboard: React.FC = () => {
                           {isPending && (
                             <>
                               <button
-                                onClick={() => verifySubscription(u.id, true)}
+                                onClick={() => handleApproveVip(u.id, u.name, sub.planName, sub.senderPhone, sub.amountPaid)}
                                 className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] transition-all cursor-pointer shadow-sm"
                                 title="Verify receipt and grant TURBO VIP"
                               >
@@ -279,32 +442,45 @@ export const AdminDashboard: React.FC = () => {
                             </>
                           )}
                           {isActive && (
-                            <button
-                              onClick={() => verifySubscription(u.id, false, 'Revoked by Admin')}
-                              className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-300 text-[10px] transition-all cursor-pointer"
-                              title="Revoke subscription"
-                            >
-                              Revoke
-                            </button>
+                            <>
+                              <button
+                                onClick={() => extendSubscription(u.id, 30)}
+                                className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-[10px] transition-all cursor-pointer"
+                                title="Add +30 Days extension to subscription"
+                              >
+                                +30 Days
+                              </button>
+                              <button
+                                onClick={() => verifySubscription(u.id, false, 'Revoked manually by Admin')}
+                                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-[10px] transition-all cursor-pointer"
+                                title="Revoke VIP access early"
+                              >
+                                Revoke
+                              </button>
+                            </>
                           )}
-                          {isRejected && (
+                          {(isRejected || isExpired) && (
                             <button
-                              onClick={() => verifySubscription(u.id, true)}
+                              onClick={() => handleApproveVip(u.id, u.name, sub.planName, sub.senderPhone, sub.amountPaid)}
                               className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all cursor-pointer"
                             >
-                              Re-Approve
+                              Re-Approve VIP
                             </button>
                           )}
                           {sub.senderPhone && (
                             <button
                               onClick={() => {
-                                const cleanDigits = sub.senderPhone!.replace(/\D/g, '');
-                                const phone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
-                                const msg = encodeURIComponent(`Salam ${u.name}! Regarding your IGNITION TURBO subscription inquiry (TID: ${sub.trxId})...`);
-                                window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+                                if (isActive) {
+                                  openWhatsAppVipCongratulations(sub.senderPhone!, u.name, sub.planName, sub.amountPaid, sub.expiresAt);
+                                } else {
+                                  const cleanDigits = sub.senderPhone!.replace(/\D/g, '');
+                                  const phone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
+                                  const msg = encodeURIComponent(`Salam ${u.name}! Regarding your IGNITION TURBO subscription inquiry (TID: ${sub.trxId})...`);
+                                  window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+                                }
                               }}
                               className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all cursor-pointer"
-                              title="Chat with driver on WhatsApp"
+                              title={isActive ? 'Send Congratulatory message on WhatsApp' : 'Chat with driver on WhatsApp'}
                             >
                               <MessageCircle className="w-3.5 h-3.5" />
                             </button>
@@ -427,25 +603,56 @@ export const AdminDashboard: React.FC = () => {
               <thead>
                 <tr className="border-b border-white/10 text-slate-400">
                   <th className="pb-3 font-semibold">Driver</th>
+                  <th className="pb-3 font-semibold">Pass / Tier</th>
                   <th className="pb-3 font-semibold">Email</th>
                   <th className="pb-3 font-semibold">Target Car</th>
                   <th className="pb-3 font-semibold text-right">Saved In Hand</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {drivers.map((u) => (
-                  <tr key={u.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 font-bold flex items-center space-x-2">
-                      <span className="text-base">{u.avatar || '🏎️'}</span>
-                      <span>{u.name}</span>
-                    </td>
-                    <td className="py-3 text-slate-400 font-mono">{u.email}</td>
-                    <td className="py-3 text-slate-300">{u.targetCarName || 'Suzuki Alto VXR'}</td>
-                    <td className="py-3 text-right font-mono font-bold text-cyan-400">
-                      {u.startingBalance ? formatPKR(u.startingBalance) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {drivers.map((u) => {
+                  const isVip = isSubscriptionActive(u.subscription);
+                  const timeline = u.subscription ? getSubscriptionTimeline(u.subscription) : null;
+                  return (
+                    <tr key={u.id} className="hover:bg-white/[0.02]">
+                      <td className="py-3 font-bold flex items-center space-x-2">
+                        <span className="text-base">{u.avatar || '🏎️'}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white">{u.name}</span>
+                          {isVip && (
+                            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 shadow-md shadow-amber-500/30 border border-yellow-300">
+                              <Crown className="w-3 h-3 fill-current" />
+                              <span>TURBO VIP</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        {isVip ? (
+                          <div>
+                            <span className="text-amber-400 font-bold text-[11px] flex items-center space-x-1">
+                              <span>⚡ {u.subscription?.planName?.toUpperCase() || 'PRO'}</span>
+                            </span>
+                            {timeline && (
+                              <span className="text-[10px] text-slate-400 block font-mono">
+                                {timeline.daysRemaining !== null ? `${timeline.daysRemaining}d left` : 'Lifetime'}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 px-2 py-0.5 rounded bg-white/5">
+                            Free Basic
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 text-slate-400 font-mono">{u.email}</td>
+                      <td className="py-3 text-slate-300">{u.targetCarName || 'Suzuki Alto VXR'}</td>
+                      <td className="py-3 text-right font-mono font-bold text-cyan-400">
+                        {u.startingBalance ? formatPKR(u.startingBalance) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
