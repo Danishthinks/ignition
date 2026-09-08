@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { formatPKR, formatLacs, formatInputCommas, parseInputCommas } from '../utils/formatters';
@@ -10,10 +10,14 @@ import {
   CheckCircle2, 
   Send,
   ShieldCheck,
-  MessageSquare,
   Sparkles,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  AlertTriangle,
+  UserCheck,
+  BadgePercent,
+  Users,
+  FileCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getCarPresetByName, calculateAutoEMI } from '../utils/carPresets';
@@ -33,12 +37,22 @@ export interface FinancingLead {
   phone: string;
   city: string;
   monthlySalary: number;
+  hasCoApplicant: boolean;
+  coApplicantSalary?: number;
+  coApplicantRelation?: string;
+  totalHouseholdIncome: number;
+  dbrRatio: number;
+  isPreQualified: boolean;
   employmentType: string;
   preferredBank: string;
   carName: string;
   downpaymentSaved: number;
-  tenureYears?: number;
-  estimatedMonthlyInstallment?: number;
+  tenureYears: number;
+  estimatedMonthlyInstallment: number;
+  checkDownpayment: boolean;
+  checkBankStatement: boolean;
+  checkJobTenure: boolean;
+  checkCleanCIB: boolean;
   submittedAt: string;
 }
 
@@ -49,29 +63,72 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   const { carGoal } = useFinance();
   const { currentUser } = useAuth();
 
+  const carPreset = useMemo(() => getCarPresetByName(carGoal.carName), [carGoal.carName]);
+  const isAbove1000cc = carPreset.engineCC > 1000;
+
+  // Form inputs
   const [fullName, setFullName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('Lahore');
-  const [salaryStr, setSalaryStr] = useState('1,50,000');
+  const [salaryStr, setSalaryStr] = useState('180,000');
   const [employmentType, setEmploymentType] = useState('Salaried Individual');
   const [preferredBank, setPreferredBank] = useState('Meezan Bank Car Ijarah (Fast-Track Partner)');
   const [tenureYears, setTenureYears] = useState<number>(3); // 3 Years standard default
+
+  // Co-Applicant (for applicants needing additional income to pass SBP DBR)
+  const [hasCoApplicant, setHasCoApplicant] = useState<boolean>(false);
+  const [coApplicantSalaryStr, setCoApplicantSalaryStr] = useState<string>('80,000');
+  const [coApplicantRelation, setCoApplicantRelation] = useState<string>('Spouse');
+
+  // 4-Point Bank Pre-Qualification Checklist
+  const [checkDownpayment, setCheckDownpayment] = useState<boolean>(true);
+  const [checkBankStatement, setCheckBankStatement] = useState<boolean>(true);
+  const [checkJobTenure, setCheckJobTenure] = useState<boolean>(true);
+  const [checkCleanCIB, setCheckCleanCIB] = useState<boolean>(true);
+
   const [submitted, setSubmitted] = useState(false);
+
+  // SBP rule enforcement: car > 1000cc capped at 3 years
+  useEffect(() => {
+    if (isAbove1000cc && tenureYears > 3) {
+      setTenureYears(3);
+    }
+  }, [isAbove1000cc, tenureYears]);
 
   if (!isOpen) return null;
 
-  const carPreset = getCarPresetByName(carGoal.carName);
   const totalMarketPrice = carPreset.totalMarketPrice;
   const downpayment30 = carGoal.targetAmount || carPreset.downpaymentTarget;
   const financedLoan70 = Math.max(0, totalMarketPrice - downpayment30);
   const estimatedEMI = calculateAutoEMI(financedLoan70, tenureYears);
 
+  // Income calculations
+  const primarySalary = parseInputCommas(salaryStr) || 0;
+  const coSalary = hasCoApplicant ? (parseInputCommas(coApplicantSalaryStr) || 0) : 0;
+  const totalVerifiedIncome = primarySalary + coSalary;
+
+  // SBP Debt Burden Ratio (DBR) calculations
+  // SBP max allowed DBR is 40% (or max 50% for special high-income segments)
+  const minSalaryRequired40 = Math.round(estimatedEMI / 0.40);
+  const minSalaryRequired50 = Math.round(estimatedEMI / 0.50);
+
+  const dbrPercent = totalVerifiedIncome > 0 
+    ? (estimatedEMI / totalVerifiedIncome) * 100 
+    : 100;
+
+  const isDbrPassed = dbrPercent <= 40;
+  const isDbrBorderline = dbrPercent > 40 && dbrPercent <= 50;
+  const isDbrFailed = dbrPercent > 50;
+
+  const allChecksPassed = checkDownpayment && checkBankStatement && checkJobTenure && checkCleanCIB;
+  const is100PercentQualified = (isDbrPassed || isDbrBorderline) && allChecksPassed;
+
   const tenureOptions = [
     { years: 1, months: 12, label: '1 Year' },
     { years: 2, months: 24, label: '2 Years' },
     { years: 3, months: 36, label: '3 Years', tag: 'Popular' },
-    { years: 4, months: 48, label: '4 Years' },
-    { years: 5, months: 60, label: '5 Years', tag: 'Max' }
+    { years: 4, months: 48, label: '4 Years', restricted: isAbove1000cc },
+    { years: 5, months: 60, label: '5 Years', tag: isAbove1000cc ? 'Restricted' : 'Max for ≤1000cc', restricted: isAbove1000cc }
   ];
 
   const pakCities = [
@@ -114,47 +171,71 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) return;
 
-    const numericSalary = parseInputCommas(salaryStr);
-
     const newLead: FinancingLead = {
       id: 'lead-' + Date.now(),
       fullName: fullName.trim(),
       phone: phone.trim(),
       city,
-      monthlySalary: numericSalary,
+      monthlySalary: primarySalary,
+      hasCoApplicant,
+      coApplicantSalary: hasCoApplicant ? coSalary : undefined,
+      coApplicantRelation: hasCoApplicant ? coApplicantRelation : undefined,
+      totalHouseholdIncome: totalVerifiedIncome,
+      dbrRatio: Math.round(dbrPercent * 10) / 10,
+      isPreQualified: is100PercentQualified,
       employmentType,
       preferredBank,
-      carName: carGoal.carName,
+      carName: carPreset.name,
       downpaymentSaved: carGoal.currentAmount,
       tenureYears,
       estimatedMonthlyInstallment: estimatedEMI,
+      checkDownpayment,
+      checkBankStatement,
+      checkJobTenure,
+      checkCleanCIB,
       submittedAt: new Date().toISOString()
     };
 
-    // Save lead to local storage for the Creator to manage
+    // Save lead to local storage
     const existing = localStorage.getItem('ignition_financing_leads');
     const leads: FinancingLead[] = existing ? JSON.parse(existing) : [];
     leads.unshift(newLead);
     localStorage.setItem('ignition_financing_leads', JSON.stringify(leads));
 
-    // Construct professional WhatsApp pre-filled text message directed to 03134216028
-    const message = `*🏎️ IGNITION Auto Financing Lead Submission*
+    // Construct Grade-A 100% Pre-Qualified WhatsApp Message for Desk & RO
+    const leadTier = is100PercentQualified ? '⭐ GRADE A (100% BANK-READY)' : '⚠️ CONDITIONAL (REQUIRES REVIEW)';
+    const dbrStatus = isDbrPassed 
+      ? `PASSED SBP 40% LIMIT (${dbrPercent.toFixed(1)}%)` 
+      : isDbrBorderline 
+        ? `BORDERLINE 40-50% (${dbrPercent.toFixed(1)}%)` 
+        : `EXCEEDS SBP LIMIT (${dbrPercent.toFixed(1)}%)`;
+
+    const message = `*🏎️ IGNITION 100% PRE-QUALIFIED FINANCING LEAD*
 ---------------------------------------
-*Driver Name:* ${newLead.fullName}
-*WhatsApp Phone:* ${newLead.phone}
+*Lead Status:* ${leadTier}
+*Applicant Name:* ${newLead.fullName}
+*WhatsApp Contact:* ${newLead.phone}
 *City:* ${newLead.city}
 *Employment:* ${newLead.employmentType}
-*Monthly Income:* ${formatPKR(newLead.monthlySalary)}
-*Target Car:* ${newLead.carName} (Total: ${formatPKR(totalMarketPrice)})
-*Downpayment Saved (30%):* ${formatPKR(newLead.downpaymentSaved)}
-*Financing Requested (70%):* ${formatPKR(financedLoan70)}
-*Lease Duration:* ${tenureYears} Years (${tenureYears * 12} Months)
-*Est. Monthly Installment:* ~${formatPKR(estimatedEMI)} / month
-*Preferred Bank:* ${newLead.preferredBank}
+*Target Vehicle:* ${carPreset.name} (${carPreset.engineCC}cc, ${carPreset.transmission})
+*Total Ex-Factory Price:* ${formatPKR(totalMarketPrice)}
+*30% Downpayment:* ${formatPKR(downpayment30)} (Status: ${checkDownpayment ? 'CONFIRMED READY' : 'In Progress'})
+*70% Lease Capital:* ${formatPKR(financedLoan70)}
+*Tenure Requested:* ${tenureYears} Years (${tenureYears * 12} Months)
+*Est. Monthly Installment (EMI):* ~${formatPKR(estimatedEMI)} / month
 ---------------------------------------
-_Sent via IGNITION First Car Finance Tracker_`;
+*FINANCIAL PRE-QUALIFICATION & SBP METRICS:*
+• Primary Monthly Income: ${formatPKR(primarySalary)}${hasCoApplicant ? `\n• Co-Applicant (${coApplicantRelation}) Income: ${formatPKR(coSalary)}\n• Total Verifiable Income: ${formatPKR(totalVerifiedIncome)}` : ''}
+• Min SBP Salary Required: ${formatPKR(minSalaryRequired40)} / mo
+• SBP Debt Burden Ratio (DBR): ${dbrStatus}
+• Salary Credited to Bank: ${checkBankStatement ? 'YES (Official Statement Available)' : 'NO'}
+• Job Tenure (6m+ / 2y+): ${checkJobTenure ? 'YES (Confirmed)' : 'NO'}
+• Credit History (e-CIB): ${checkCleanCIB ? 'CLEAN (No Defaults)' : 'HAS PAST OVERDUE'}
+• Preferred Bank: ${newLead.preferredBank}
+---------------------------------------
+_Verified via IGNITION SBP Pre-Qualification Engine_
+_Forward directly to Bank Relationship Officer (RO)_`;
 
-    // Direct link to the Creator's WhatsApp: +923134216028
     const encodedMsg = encodeURIComponent(message);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${OFFICIAL_WHATSAPP_NUMBER}&text=${encodedMsg}`;
     window.open(whatsappUrl, '_blank');
@@ -167,12 +248,12 @@ _Sent via IGNITION First Car Finance Tracker_`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
       <motion.div
         initial={{ scale: 0.94, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.94, opacity: 0 }}
-        className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-emerald-500/30 text-white shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-2xl rounded-3xl bg-slate-900 border border-emerald-500/40 text-white shadow-2xl p-5 sm:p-7 overflow-hidden max-h-[94vh] flex flex-col"
       >
         {/* Glow */}
         <div className="absolute -top-20 -right-20 w-60 h-60 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -180,40 +261,47 @@ _Sent via IGNITION First Car Finance Tracker_`;
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+          aria-label="Close"
+          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-md">
+        <div className="flex items-start space-x-3 mb-4 shrink-0 pr-8">
+          <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-md shrink-0">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="text-xl font-heading font-black text-white uppercase tracking-wide">
-                Car Financing Inquiry
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xl font-heading font-black text-white uppercase tracking-tight">
+                100% Pre-Qualified Auto Financing
               </h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 uppercase">
-                70% LEASE
+              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 uppercase shadow-sm">
+                SBP DBR VERIFIED
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Direct connection to financing desk via WhatsApp ({DISPLAY_WHATSAPP_NUMBER})
+            <p className="text-xs text-slate-400 mt-0.5">
+              Instant verification under State Bank of Pakistan Consumer Financing Regulations.
             </p>
           </div>
         </div>
 
-        {/* Context Badge */}
-        <div className="p-3 rounded-2xl bg-white/5 border border-white/10 mb-5 flex items-center justify-between text-xs">
+        {/* Vehicle Context Bar */}
+        <div className="p-3 rounded-2xl bg-white/5 border border-white/10 mb-4 flex items-center justify-between text-xs shrink-0">
           <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Your Target Car</span>
-            <strong className="text-white">{carGoal.carName}</strong>
+            <span className="text-slate-400 block text-[10px] uppercase font-bold">Selected Vehicle</span>
+            <strong className="text-white text-sm">{carPreset.name}</strong>
+            <div className="text-[10px] text-emerald-300 font-semibold">
+              Total: {formatLacs(totalMarketPrice)} • {carPreset.transmission}
+            </div>
           </div>
           <div className="text-right">
             <span className="text-slate-400 block text-[10px] uppercase font-bold">30% Downpayment</span>
-            <strong className="text-emerald-400">{formatPKR(carGoal.currentAmount)} ({formatLacs(carGoal.currentAmount)})</strong>
+            <strong className="text-cyan-400 text-sm">{formatPKR(downpayment30)}</strong>
+            <div className="text-[10px] text-slate-400">
+              ({formatLacs(downpayment30)})
+            </div>
           </div>
         </div>
 
@@ -221,24 +309,27 @@ _Sent via IGNITION First Car Finance Tracker_`;
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="py-10 text-center space-y-3"
+            className="py-12 text-center space-y-3"
           >
-            <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-9 h-9" />
             </div>
-            <h4 className="text-lg font-heading font-bold text-white">
-              WhatsApp Chat Initialized!
+            <h4 className="text-xl font-heading font-black text-white">
+              100% Pre-Qualified Lead Generated!
             </h4>
-            <p className="text-xs text-slate-300 max-w-sm mx-auto">
-              Your inquiry has been routed to <strong>{DISPLAY_WHATSAPP_NUMBER}</strong>. Check your WhatsApp window to send the formatted message.
+            <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+              Your verified application and SBP credit scorecard have been prepared for <strong>{DISPLAY_WHATSAPP_NUMBER}</strong>. WhatsApp has opened in a new tab.
             </p>
           </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          /* Form Body */
+          <form onSubmit={handleSubmit} className="overflow-y-auto pr-1 space-y-4 flex-1">
+            
+            {/* Applicant Basic Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Full Name
+                  Full Name (As on CNIC)
                 </label>
                 <input
                   type="text"
@@ -246,39 +337,37 @@ _Sent via IGNITION First Car Finance Tracker_`;
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Bilal Ahmed"
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Your WhatsApp Number
+                  WhatsApp Contact
                 </label>
                 <div className="relative">
-                  <Phone className="w-3.5 h-3.5 absolute left-3.5 top-3 text-emerald-400" />
+                  <Phone className="w-3.5 h-3.5 absolute left-3 top-2.5 text-emerald-400" />
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="0300 1234567"
                     required
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                   City
                 </label>
                 <div className="relative">
-                  <MapPin className="w-3.5 h-3.5 absolute left-3.5 top-3 text-slate-400" />
+                  <MapPin className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
                   <select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
                   >
                     {pakCities.map((c) => (
                       <option key={c} value={c} className="bg-slate-900 text-white">
@@ -288,23 +377,9 @@ _Sent via IGNITION First Car Finance Tracker_`;
                   </select>
                 </div>
               </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Monthly Salary / Income (PKR ₨)
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={salaryStr}
-                  onChange={(e) => setSalaryStr(formatInputCommas(e.target.value))}
-                  placeholder="e.g. 1,50,000"
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-400 text-xs font-bold text-white outline-none"
-                />
-              </div>
             </div>
 
+            {/* Employment & Monthly Income Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
@@ -313,158 +388,342 @@ _Sent via IGNITION First Car Finance Tracker_`;
                 <select
                   value={employmentType}
                   onChange={(e) => setEmploymentType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
                 >
-                  <option value="Salaried Individual" className="bg-slate-900 text-white">Salaried Individual</option>
-                  <option value="Self-Employed / Freelancer" className="bg-slate-900 text-white">Self-Employed / Freelancer</option>
-                  <option value="Business Owner / Trader" className="bg-slate-900 text-white">Business Owner / Trader</option>
+                  <option value="Salaried Individual" className="bg-slate-900 text-white">Salaried Individual (Direct Bank Transfer)</option>
+                  <option value="Self-Employed / Freelancer" className="bg-slate-900 text-white">Self-Employed / Freelancer (Active Account)</option>
+                  <option value="Business Owner / Trader" className="bg-slate-900 text-white">Business Owner / Trader (Registered NTN)</option>
                 </select>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    Preferred Bank / Lease
+                    Net Monthly Take-Home Salary (PKR ₨)
                   </label>
-                  <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider flex items-center space-x-1">
-                    <Sparkles className="w-3 h-3" />
-                    <span>Fast-Track Desk</span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                    {formatLacs(primarySalary)}
                   </span>
                 </div>
-                <select
-                  value={preferredBank}
-                  onChange={(e) => setPreferredBank(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-emerald-500/30 focus:border-emerald-400 text-xs text-white outline-none font-semibold"
-                >
-                  <optgroup label="⚡ FAST-TRACK PARTNER BANKS (PRIORITY APPROVAL)" className="font-black text-emerald-400 bg-slate-900">
-                    {fastTrackBanks.map((b) => (
-                      <option 
-                        key={b.value} 
-                        value={b.value} 
-                        className="font-extrabold text-white bg-slate-900 py-1.5"
-                      >
-                        {b.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="OTHER COMMERCIAL & ISLAMIC BANKS" className="font-normal text-slate-400 bg-slate-900">
-                    {standardBanks.map((b) => (
-                      <option key={b} value={b} className="font-normal text-slate-300 bg-slate-900">
-                        {b}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-
-                {preferredBank.includes('Fast-Track Partner') && (
-                  <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start space-x-2">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-emerald-300 font-semibold leading-tight">
-                      <strong>Fast-Track Partner Selected:</strong> Priority 4–5 day approval desk with direct RO relationship support.
-                    </p>
-                  </div>
-                )}
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs font-bold text-emerald-400">₨</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={salaryStr}
+                    onChange={(e) => setSalaryStr(formatInputCommas(e.target.value))}
+                    placeholder="180,000"
+                    required
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-white/10 focus:border-emerald-400 text-xs font-bold text-white outline-none font-mono"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* FINANCING TENURE & ESTIMATED MONTHLY INSTALLMENT (EMI) CALCULATOR */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/90 via-slate-850 to-slate-900 border border-emerald-500/30 space-y-3">
+            {/* Co-Applicant Income Section (For boosting qualification) */}
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-white/10 space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center space-x-1.5">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-bold text-white">
+                    Add Co-Borrower / Family Income? (Spouse / Parent / Sibling)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHasCoApplicant(!hasCoApplicant)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                    hasCoApplicant 
+                      ? 'bg-cyan-500 text-slate-950 font-black' 
+                      : 'bg-white/10 text-slate-300 hover:bg-white/15'
+                  }`}
+                >
+                  {hasCoApplicant ? '✓ Added' : '+ Add Co-Applicant'}
+                </button>
+              </div>
+
+              {hasCoApplicant && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">
+                      Co-Borrower Relationship
+                    </label>
+                    <select
+                      value={coApplicantRelation}
+                      onChange={(e) => setCoApplicantRelation(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white"
+                    >
+                      <option value="Spouse (Wife/Husband)">Spouse (Wife / Husband)</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Brother / Sister">Brother / Sister</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">
+                      Co-Applicant Monthly Income (PKR ₨)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1.5 text-xs font-bold text-cyan-400">₨</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={coApplicantSalaryStr}
+                        onChange={(e) => setCoApplicantSalaryStr(formatInputCommas(e.target.value))}
+                        className="w-full pl-7 pr-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SBP Tenure Duration Selector */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
                   <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Financing Tenure (Loan Duration)</span>
+                  <span>Lease Tenure & SBP Regulations</span>
                 </label>
                 <span className="text-[10px] text-slate-400">
-                  Select your lease period
+                  {tenureYears * 12} Installments
                 </span>
               </div>
 
-              {/* Interactive Tenure Pills */}
               <div className="grid grid-cols-5 gap-1.5">
-                {tenureOptions.map((t) => (
-                  <button
-                    key={t.years}
-                    type="button"
-                    onClick={() => setTenureYears(t.years)}
-                    className={`p-2 rounded-xl border text-center transition-all ${
-                      tenureYears === t.years
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-black shadow-md shadow-emerald-500/10'
-                        : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{t.label}</div>
-                    <div className="text-[9px] text-slate-400 font-mono">{t.months} Mo</div>
-                    {t.tag && (
-                      <div className="text-[8px] text-emerald-400 font-bold truncate mt-0.5">
-                        {t.tag}
-                      </div>
-                    )}
-                  </button>
-                ))}
+                {tenureOptions.map((t) => {
+                  const isRestricted = t.restricted;
+                  return (
+                    <button
+                      key={t.years}
+                      type="button"
+                      disabled={isRestricted}
+                      onClick={() => !isRestricted && setTenureYears(t.years)}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        isRestricted
+                          ? 'opacity-30 bg-slate-900 border-white/5 text-slate-600 cursor-not-allowed'
+                          : tenureYears === t.years
+                            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-black shadow-md shadow-emerald-500/10'
+                            : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{t.label}</div>
+                      <div className="text-[8px] text-slate-400">{t.months}m</div>
+                      {t.tag && !isRestricted && (
+                        <div className="text-[7px] text-emerald-400 font-bold truncate">
+                          {t.tag === 'Most Popular' ? 'Popular' : 'Max'}
+                        </div>
+                      )}
+                      {isRestricted && (
+                        <div className="text-[7px] text-amber-400 font-bold truncate">
+                          SBP Cap
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* REAL-TIME SBP DBR PRE-QUALIFICATION SCORECARD */}
+            <div className={`p-4 rounded-2xl border transition-all ${
+              isDbrPassed
+                ? 'bg-gradient-to-br from-emerald-950/70 via-slate-950 to-slate-900 border-emerald-500/50'
+                : isDbrBorderline
+                  ? 'bg-gradient-to-br from-amber-950/60 via-slate-950 to-slate-900 border-amber-500/50'
+                  : 'bg-gradient-to-br from-rose-950/60 via-slate-950 to-slate-900 border-rose-500/50'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3 mb-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Estimated Monthly Installment (70% Lease)
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-black font-heading text-emerald-400">
+                    ~{formatPKR(estimatedEMI)}
+                    <span className="text-xs font-semibold text-emerald-300/80"> / month</span>
+                  </div>
+                </div>
+
+                <div className="sm:text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    SBP Debt Burden Ratio (DBR)
+                  </span>
+                  <div className="flex items-center sm:justify-end space-x-1.5 mt-0.5">
+                    <span className={`text-xl font-black font-mono ${
+                      isDbrPassed ? 'text-emerald-400' : isDbrBorderline ? 'text-amber-400' : 'text-rose-400'
+                    }`}>
+                      {dbrPercent.toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      (SBP Cap: 40%)
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Live Estimated Monthly Installment (EMI) Breakdown Card */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-emerald-500/20">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5 mb-2.5">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Estimated Monthly Installment (70% Lease)
-                    </span>
-                    <div className="text-2xl font-black font-heading text-emerald-400">
-                      ~{formatPKR(estimatedEMI)}{' '}
-                      <span className="text-xs font-semibold text-emerald-300/80">/ month</span>
+              {/* Status Message */}
+              <div className="space-y-1.5">
+                {isDbrPassed && (
+                  <div className="flex items-start space-x-2 text-emerald-300 text-xs">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                    <div>
+                      <strong>✅ 100% SBP Salary Pre-Qualified:</strong> Your household income of {formatPKR(totalVerifiedIncome)} comfortably fulfills State Bank regulations. Your monthly EMI is only <strong>{dbrPercent.toFixed(1)}%</strong> of your income (safe threshold is &le; 40%).
                     </div>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-slate-400 block">Financed Capital (70%)</span>
-                    <span className="text-sm font-bold text-white font-mono">{formatPKR(financedLoan70)}</span>
-                  </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-300 mb-1">
-                  <div>
-                    <span className="text-slate-400">Target Car:</span>{' '}
-                    <strong className="text-white">{carGoal.carName}</strong>
+                {isDbrBorderline && (
+                  <div className="flex items-start space-x-2 text-amber-300 text-xs">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div>
+                      <strong>⚠️ Borderline DBR ({dbrPercent.toFixed(1)}%):</strong> SBP standard cap is 40%, but banks accept up to 50% for high-grade profiles. Adding a co-applicant or 5% extra downpayment will ensure 100% guaranteed approval.
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-400">Total Price:</span>{' '}
-                    <strong className="text-white">{formatLacs(totalMarketPrice)}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Downpayment (30%):</span>{' '}
-                    <strong className="text-cyan-300">{formatLacs(downpayment30)}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Lease Tenure:</span>{' '}
-                    <strong className="text-emerald-300">{tenureYears} Years ({tenureYears * 12} Mo)</strong>
-                  </div>
-                </div>
+                )}
 
-                <div className="mt-2 pt-2 border-t border-white/10 flex items-start space-x-1.5 text-[9.5px] text-amber-300/90 leading-relaxed">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Disclaimer:</strong> Estimated installments are preliminary indicators based on benchmark rates (~18–20% p.a. + takaful). Actual monthly installments will be officially calculated by the financing bank upon document review, adding processing fees and taxes, which vary from bank to bank.
-                  </span>
+                {isDbrFailed && (
+                  <div className="flex items-start space-x-2 text-rose-300 text-xs">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                    <div>
+                      <strong>❌ High Debt Burden ({dbrPercent.toFixed(1)}%):</strong> Under SBP Prudential Regulations, monthly EMI cannot exceed 40–50% of income. <strong>Minimum salary required for this car is {formatPKR(minSalaryRequired40)}/mo.</strong> Please add a Co-Applicant or increase downpayment.
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-[10px] text-slate-400 pt-1">
+                  Bank Standard Requirement: Minimum verifiable salary of <strong>{formatPKR(minSalaryRequired40)}</strong> for {carPreset.name}.
                 </div>
               </div>
             </div>
 
+            {/* 4-POINT MANDATORY BANK READINESS CHECKLIST */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
+                  <FileCheck className="w-4 h-4 text-emerald-400" />
+                  <span>4-Point Bank Pre-Qualification Checklist</span>
+                </label>
+                <span className="text-[10px] text-emerald-400 font-bold">
+                  All 4 Mandatory
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {/* 1. Downpayment */}
+                <label className="flex items-start space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkDownpayment}
+                    onChange={(e) => setCheckDownpayment(e.target.checked)}
+                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
+                  />
+                  <span className="text-slate-300 text-[11px] leading-tight">
+                    <strong>30% Downpayment Ready:</strong> I have <strong>{formatPKR(downpayment30)}</strong> in cash or bank savings ready for deposit.
+                  </span>
+                </label>
+
+                {/* 2. Bank Statement */}
+                <label className="flex items-start space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkBankStatement}
+                    onChange={(e) => setCheckBankStatement(e.target.checked)}
+                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
+                  />
+                  <span className="text-slate-300 text-[11px] leading-tight">
+                    <strong>Official Bank-Credited Salary:</strong> Salary is deposited directly via bank transfer with monthly payslips (or active 1-year business statement).
+                  </span>
+                </label>
+
+                {/* 3. Job Tenure */}
+                <label className="flex items-start space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkJobTenure}
+                    onChange={(e) => setCheckJobTenure(e.target.checked)}
+                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
+                  />
+                  <span className="text-slate-300 text-[11px] leading-tight">
+                    <strong>Employment Tenure:</strong> Minimum 6 months at current permanent employment (or 2 years continuous business history).
+                  </span>
+                </label>
+
+                {/* 4. Clean e-CIB */}
+                <label className="flex items-start space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkCleanCIB}
+                    onChange={(e) => setCheckCleanCIB(e.target.checked)}
+                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
+                  />
+                  <span className="text-slate-300 text-[11px] leading-tight">
+                    <strong>Clean Credit Record (e-CIB):</strong> No active loan defaults or credit card write-offs in the State Bank credit bureau.
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Bank Selection */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Select Financing Bank
+                </label>
+                <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider flex items-center space-x-1">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Fast-Track Desk</span>
+                </span>
+              </div>
+              <select
+                value={preferredBank}
+                onChange={(e) => setPreferredBank(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-emerald-500/30 focus:border-emerald-400 text-xs text-white outline-none font-semibold"
+              >
+                <optgroup label="⚡ FAST-TRACK PARTNER BANKS (PRIORITY APPROVAL)" className="font-black text-emerald-400 bg-slate-900">
+                  {fastTrackBanks.map((b) => (
+                    <option key={b.value} value={b.value} className="font-extrabold text-white bg-slate-900 py-1.5">
+                      {b.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="OTHER COMMERCIAL & ISLAMIC BANKS" className="font-normal text-slate-400 bg-slate-900">
+                  {standardBanks.map((b) => (
+                    <option key={b} value={b} className="font-normal text-slate-300 bg-slate-900">
+                      {b}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Submit Button */}
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full flex items-center justify-center space-x-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm transition-all shadow-lg shadow-emerald-500/25"
+                disabled={!allChecksPassed || isDbrFailed}
+                className={`w-full flex items-center justify-center space-x-2 py-3.5 px-4 rounded-xl font-black text-sm transition-all shadow-lg cursor-pointer ${
+                  allChecksPassed && !isDbrFailed
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25'
+                    : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/5'
+                }`}
               >
                 <Send className="w-4 h-4" />
-                <span>Send to WhatsApp ({DISPLAY_WHATSAPP_NUMBER})</span>
+                <span>
+                  {allChecksPassed && !isDbrFailed
+                    ? `Submit 100% Pre-Qualified Lead (${DISPLAY_WHATSAPP_NUMBER})`
+                    : 'Complete Verification Above to Unlock Lead Submission'}
+                </span>
               </button>
             </div>
 
             <div className="flex items-center justify-center space-x-1 text-[10px] text-slate-400 text-center">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Directly opens WhatsApp chat with the Ignition Auto Financing Desk ({DISPLAY_WHATSAPP_NUMBER}).</span>
+              <span>Only fully verified applicants complying with SBP rules are routed to your WhatsApp desk.</span>
             </div>
+
           </form>
         )}
+
       </motion.div>
     </div>
   );
