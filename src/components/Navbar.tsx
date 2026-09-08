@@ -14,7 +14,8 @@ import {
   User as UserIcon,
   LogOut,
   Crown,
-  Calculator
+  Calculator,
+  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatLacs } from '../utils/formatters';
@@ -26,6 +27,8 @@ interface NavbarProps {
   onOpenAuthModal: (tab?: 'login' | 'signup') => void;
   onOpenTutorialModal: () => void;
   onOpenEmiCalculator?: () => void;
+  onOpenUpgradeModal?: () => void;
+  onOpenCompareModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,6 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuthModal,
   onOpenTutorialModal,
   onOpenEmiCalculator,
+  onOpenUpgradeModal,
+  onOpenCompareModal,
 }) => {
   const { 
     isDarkMode, 
@@ -45,7 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     carGoal 
   } = useFinance();
 
-  const { currentUser, logout, isCreator } = useAuth();
+  const { currentUser, logout, isCreator, isPro } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-[#0B0F17]/80 backdrop-blur-md transition-colors">
@@ -117,6 +122,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Calculator className="w-3.5 h-3.5" />
               <span className="hidden md:inline">EMI Calculator</span>
+            </motion.button>
+          )}
+
+          {/* IGNITION TURBO Pass Button */}
+          {onOpenUpgradeModal && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onOpenUpgradeModal}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
+                isPro
+                  ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/30 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/20'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-md shadow-amber-500/25'
+              }`}
+              title={isPro ? 'You have active TURBO VIP status' : 'Upgrade to TURBO Pro for ₨ 100/mo'}
+            >
+              <Zap className={`w-3.5 h-3.5 fill-current ${isPro ? 'text-amber-400' : 'text-slate-950'}`} />
+              <span className="font-extrabold">{isPro ? 'TURBO VIP' : 'TURBO ₨100'}</span>
             </motion.button>
           )}
 

@@ -37,6 +37,7 @@ interface FinancingInquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialCarId?: string;
+  onOpenDossier?: () => void;
 }
 
 export interface FinancingLead {
@@ -67,10 +68,11 @@ export interface FinancingLead {
 export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   isOpen,
   onClose,
-  initialCarId
+  initialCarId,
+  onOpenDossier
 }) => {
   const { carGoal } = useFinance();
-  const { currentUser } = useAuth();
+  const { currentUser, isPro } = useAuth();
 
   // Find the primary vehicle for which user is saving
   const goalPreset = useMemo(() => getCarPresetByName(carGoal.carName), [carGoal.carName]);
@@ -239,6 +241,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
 
     // Construct Grade-A 100% Pre-Qualified WhatsApp Message for Desk & RO
     const leadTier = is100PercentQualified ? '⭐ GRADE A (100% BANK-READY)' : '⚠️ CONDITIONAL (REQUIRES REVIEW)';
+    const turboTag = isPro ? '⚡ IGNITION TURBO VIP APPLICANT (DIRECT BRANCH RO DESK)' : 'STANDARD INQUIRY';
     const dbrStatus = isDbrPassed 
       ? `PASSED SBP 40% LIMIT (${dbrPercent.toFixed(1)}%)` 
       : isDbrBorderline 
@@ -248,6 +251,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
     const message = `*🏎️ IGNITION 100% PRE-QUALIFIED FINANCING LEAD*
 ---------------------------------------
 *Lead Status:* ${leadTier}
+*Priority Tier:* ${turboTag}
 *Applicant Name:* ${newLead.fullName}
 *WhatsApp Contact:* ${newLead.phone}
 *City:* ${newLead.city}
@@ -316,6 +320,19 @@ _Forward directly to Bank Relationship Officer (RO)_`;
               <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 uppercase shadow-sm">
                 SBP DBR VERIFIED
               </span>
+              {isPro && onOpenDossier && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenDossier();
+                  }}
+                  className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer"
+                >
+                  <FileCheck className="w-3 h-3" />
+                  <span>TURBO Credit Dossier</span>
+                </button>
+              )}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Check eligibility for your target savings car or switch to any eligible Pakistani model.

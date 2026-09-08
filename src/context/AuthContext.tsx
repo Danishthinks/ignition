@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User, UserRole } from '../types/auth';
+import type { User, UserRole, SubscriptionPlan, SubscriptionDetails } from '../types/auth';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -18,6 +18,18 @@ interface AuthContextType {
   unlockCreatorMode: (passcode: string) => boolean;
   exitCreatorMode: () => void;
   isCreator: boolean;
+  isPro: boolean;
+  subscription: SubscriptionDetails | null;
+  upgradeToPro: (
+    plan: SubscriptionPlan,
+    details: {
+      trxId: string;
+      senderPhone?: string;
+      senderName?: string;
+      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant';
+    }
+  ) => { success: boolean; message?: string };
+  cancelPro: () => void;
   hasSeenTutorial: boolean;
   completeTutorial: () => void;
   resetTutorial: () => void;
@@ -214,6 +226,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isCreator = currentUser?.role === 'admin';
+  const isPro = isCreator || currentUser?.subscription?.status === 'active';
+  const subscription = currentUser?.subscription || null;
+
+  const upgradeToPro = (
+    plan: SubscriptionPlan,
+    details: {
+      trxId: string;
+      senderPhone?: string;
+      senderName?: string;
+      paymentMethod?: 'nayapay' | 'raast' | 'easypaisa' | 'jazzcash' | 'creator_grant';
+    }
+  ): { success: boolean; message?: string } => {
+    if (!currentUser) {
+      return { success: false, message: 'Please log in to upgrade to TURBO.' };
+    }
+
+    const now = new Date();
+    let expiresAt = 'lifetime';
+    let amountPaid = 999;
+
+    if (plan === 'monthly') {
+      amountPaid = 100;
+      const expiry = new Date(now);
+      expiry.setMonth(expiry.getMonth() + 1);
+      expiresAt = expiry.toISOString();
+    } else if (plan === 'quarterly') {
+      amountPaid = 250;
+      const expiry = new Date(now);
+      expiry.setMonth(expiry.getMonth() + 3);
+      expiresAt = expiry.toISOString();
+    } else if (plan === 'annual') {
+      amountPaid = 800;
+      const expiry = new Date(now);
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      expiresAt = expiry.toISOString();
+    } else {
+      amountPaid = 999;
+      expiresAt = 'lifetime';
+    }
+
+    const newSub: SubscriptionDetails = {
+      tier: 'pro',
+      planName: plan,
+      amountPaid,
+      subscribedAt: now.toISOString(),
+      expiresAt,
+      paymentMethod: details.paymentMethod || 'nayapay',
+      trxId: details.trxId.trim() || `TID-${Date.now().toString().slice(-6)}`,
+      senderPhone: details.senderPhone,
+      senderName: details.senderName,
+      status: 'active'
+    };
+
+    const updatedUser: User = {
+      ...currentUser,
+      subscription: newSub
+    };
+
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+
+    return { success: true, message: 'IGNITION TURBO successfully activated! Welcome to the VIP tier.' };
+  };
+
+  const cancelPro = () => {
+    if (!currentUser) return;
+    const updatedUser: User = {
+      ...currentUser,
+      subscription: undefined
+    };
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+  };
 
   return (
     <AuthContext.Provider
@@ -228,6 +313,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unlockCreatorMode,
         exitCreatorMode,
         isCreator,
+        isPro,
+        subscription,
+        upgradeToPro,
+        cancelPro,
         hasSeenTutorial,
         completeTutorial,
         resetTutorial

@@ -20,6 +20,9 @@ import { TutorialGuideModal } from './components/TutorialGuideModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CreatorTerminalModal } from './components/CreatorTerminalModal';
 import { LandingAuthPage } from './components/LandingAuthPage';
+import { UpgradeModal } from './components/UpgradeModal';
+import { CreditDossierModal } from './components/CreditDossierModal';
+import { CarCompareModal } from './components/CarCompareModal';
 import type { TransactionType } from './types/finance';
 import { motion } from 'framer-motion';
 
@@ -37,6 +40,9 @@ const MainAppLayout: React.FC = () => {
   const [isFinancingModalOpen, setIsFinancingModalOpen] = useState(false);
   const [financingInitialCarId, setFinancingInitialCarId] = useState<string | undefined>(undefined);
   const [isEmiModalOpen, setIsEmiModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
   // Secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A) or URL hash #creator
   useEffect(() => {
@@ -105,6 +111,8 @@ const MainAppLayout: React.FC = () => {
         onOpenCarModal={() => setIsCarModalOpen(true)}
         onOpenImpulseModal={() => setIsImpulseModalOpen(true)}
         onOpenEmiCalculator={() => setIsEmiModalOpen(true)}
+        onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+        onOpenCompareModal={() => setIsCompareModalOpen(true)}
         onOpenAuthModal={(tab) => {
           setAuthModalTab(tab || 'signup');
           setIsAuthModalOpen(true);
@@ -201,6 +209,7 @@ const MainAppLayout: React.FC = () => {
               >
                 <TransactionList
                   onOpenTransactionModal={() => handleOpenTransaction('income')}
+                  onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
                 />
               </motion.div>
             </div>
@@ -232,6 +241,7 @@ const MainAppLayout: React.FC = () => {
           setFinancingInitialCarId(undefined);
         }}
         initialCarId={financingInitialCarId}
+        onOpenDossier={() => setIsDossierModalOpen(true)}
       />
 
       {/* Standalone Auto Lease EMI Calculator Modal */}
@@ -243,6 +253,26 @@ const MainAppLayout: React.FC = () => {
           setIsEmiModalOpen(false);
           setIsFinancingModalOpen(true);
         }}
+      />
+
+      {/* IGNITION TURBO Pro Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onOpenDossier={() => setIsDossierModalOpen(true)}
+        onOpenCompare={() => setIsCompareModalOpen(true)}
+      />
+
+      {/* Bank-Ready Credit Dossier Printable Modal */}
+      <CreditDossierModal
+        isOpen={isDossierModalOpen}
+        onClose={() => setIsDossierModalOpen(false)}
+      />
+
+      {/* Multi-Car Comparison Engine Modal */}
+      <CarCompareModal
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
       />
 
       <AuthModal

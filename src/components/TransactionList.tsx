@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 import type { TransactionType } from '../types/finance';
 import { formatPKR, formatDate } from '../utils/formatters';
 import { 
@@ -8,19 +9,24 @@ import {
   ArrowUpRight, 
   Trash2, 
   Search, 
-  Sparkles,
-  Plus
+  Sparkles, 
+  Plus,
+  Download,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TransactionListProps {
   onOpenTransactionModal: () => void;
+  onOpenUpgradeModal?: () => void;
 }
 
 export const TransactionList: React.FC<TransactionListProps> = ({
   onOpenTransactionModal,
+  onOpenUpgradeModal,
 }) => {
   const { transactions, deleteTransaction } = useFinance();
+  const { isPro } = useAuth();
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -56,6 +62,31 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     }
   };
 
+  const handleExportCSV = () => {
+    if (!isPro) {
+      onOpenUpgradeModal?.();
+      return;
+    }
+
+    const headers = ['Date', 'Type', 'Category', 'Amount (PKR)', 'Note'];
+    const rows = transactions.map(t => [
+      t.date,
+      t.type,
+      t.category,
+      t.amount,
+      `"${t.note.replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ignition_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white/90 dark:bg-cockpit-card/90 shadow-lg p-5 sm:p-6 backdrop-blur-md transition-colors">
       {/* Header & Controls */}
@@ -73,6 +104,25 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* CSV Export Button (Pro / Turbo) */}
+          <button
+            onClick={handleExportCSV}
+            className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              isPro
+                ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+            }`}
+            title={isPro ? 'Download full transaction ledger as CSV' : 'Exporting CSV requires IGNITION TURBO (₨ 100/mo)'}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+            {!isPro && (
+              <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-500 font-extrabold ml-0.5">
+                TURBO
+              </span>
+            )}
+          </button>
+
           {/* Search Box */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
