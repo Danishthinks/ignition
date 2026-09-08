@@ -29,6 +29,7 @@ const MainAppLayout: React.FC = () => {
   const [isCarModalOpen, setIsCarModalOpen] = useState(false);
   const [isImpulseModalOpen, setIsImpulseModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('signup');
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
   const [isFinancingModalOpen, setIsFinancingModalOpen] = useState(false);
@@ -76,7 +77,10 @@ const MainAppLayout: React.FC = () => {
         onOpenTransactionModal={() => handleOpenTransaction('car_deposit')}
         onOpenCarModal={() => setIsCarModalOpen(true)}
         onOpenImpulseModal={() => setIsImpulseModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenAuthModal={(tab) => {
+          setAuthModalTab(tab || 'signup');
+          setIsAuthModalOpen(true);
+        }}
         onOpenTutorialModal={() => setIsTutorialModalOpen(true)}
       />
 
@@ -94,6 +98,49 @@ const MainAppLayout: React.FC = () => {
         ) : (
           /* Regular Driver Experience */
           <>
+            {/* Guest Explorer Welcome & Sign Up Prompt */}
+            {!currentUser && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/70 via-slate-900 to-blue-950/70 border border-cyan-500/30 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 shrink-0 text-lg">
+                    🏎️
+                  </div>
+                  <div>
+                    <h4 className="font-heading font-black text-sm text-white flex items-center space-x-1.5">
+                      <span>Welcome Driver! You are exploring in Preview Mode.</span>
+                    </h4>
+                    <p className="text-slate-300 text-[11px] mt-0.5">
+                      Create an account or sign in to save your personal ₨ 8.5–9.0 Lacs first car downpayment progress.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      setAuthModalTab('login');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-white/20 hover:border-cyan-400 text-slate-200 hover:text-white font-bold text-xs transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModalTab('signup');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-md shadow-cyan-500/30 transition-all"
+                  >
+                    Create Free Account
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
             {/* Daily High-Octane Motivation Banner */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -195,6 +242,7 @@ const MainAppLayout: React.FC = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
       />
 
       <OnboardingModal />

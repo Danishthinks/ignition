@@ -33,37 +33,42 @@ const CREATOR_ACCOUNT: User = {
   avatar: '👑'
 };
 
-const INITIAL_USERS: User[] = [
-  CREATOR_ACCOUNT,
-  {
-    id: 'user-driver-1',
-    name: 'Hamza',
-    email: 'driver@ignition.pk',
-    role: 'driver',
-    targetCarName: 'Suzuki Alto VXR',
-    startingBalance: 265000,
-    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-    avatar: '🏎️'
-  }
-];
+const INITIAL_USERS: User[] = [CREATOR_ACCOUNT];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('ignition_users_v2');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        const parsed: User[] = JSON.parse(saved);
+        return parsed.filter(u => u.id !== 'user-driver-1' && u.email !== 'driver@ignition.pk');
+      } catch {
+        return INITIAL_USERS;
+      }
+    }
     return INITIAL_USERS;
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('ignition_current_user_v2');
-    if (saved) return JSON.parse(saved);
-    // Default to the first driver
-    return INITIAL_USERS.find(u => u.role === 'driver') || INITIAL_USERS[1];
+    if (saved) {
+      try {
+        const parsed: User = JSON.parse(saved);
+        if (parsed?.id !== 'user-driver-1' && parsed?.email !== 'driver@ignition.pk') {
+          return parsed;
+        }
+      } catch {
+        return null;
+      }
+    }
+    // Default to null (Guest explorer mode)
+    return null;
   });
 
   const [hasSeenTutorial, setHasSeenTutorial] = useState<boolean>(() => {
     const saved = localStorage.getItem('ignition_tutorial_seen');
-    return saved === 'true';
+    // Default to true so visitors go straight into the application without the initial saving question popup
+    return saved !== null ? saved === 'true' : true;
   });
 
   useEffect(() => {
@@ -112,20 +117,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUsers(prev => [...prev, newUser]);
     setCurrentUser(newUser);
-    setHasSeenTutorial(false);
-    localStorage.setItem('ignition_tutorial_seen', 'false');
+    setHasSeenTutorial(true);
+    localStorage.setItem('ignition_tutorial_seen', 'true');
     return newUser;
   };
 
   const logout = () => {
-    // Return to default guest or first driver
-    const driverDemo = users.find(u => u.role === 'driver') || null;
-    setCurrentUser(driverDemo);
+    setCurrentUser(null);
   };
 
   const switchDemoDriver = () => {
-    const demo = users.find(u => u.email === 'driver@ignition.pk');
-    if (demo) setCurrentUser(demo);
+    // Demo driver removed
   };
 
   // Secret Creator Access - Master Passcode verification
@@ -144,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const exitCreatorMode = () => {
-    const driver = users.find(u => u.role === 'driver') || INITIAL_USERS[1];
+    const driver = users.find(u => u.role === 'driver') || null;
     setCurrentUser(driver);
   };
 

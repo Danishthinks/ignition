@@ -14,14 +14,21 @@ import { formatInputCommas, parseInputCommas, formatLacs } from '../utils/format
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'login' | 'signup';
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { login, signup, switchDemoDriver } = useAuth();
-  const [tab, setTab] = useState<'login' | 'signup'>('login');
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 'signup' }) => {
+  const { login, signup } = useAuth();
+  const [tab, setTab] = useState<'login' | 'signup'>(initialTab);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Login state
-  const [loginEmail, setLoginEmail] = useState('driver@ignition.pk');
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginError, setLoginError] = useState('');
 
   // Signup state
@@ -36,11 +43,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const success = login(loginEmail);
+    if (!loginEmail.trim()) return;
+    const success = login(loginEmail.trim());
     if (success) {
       onClose();
     } else {
-      setLoginError('No driver account found with this email. Create a new driver account below.');
+      setLoginError('No driver account found with this email. Create your driver account below.');
     }
   };
 
@@ -57,11 +65,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       carName: carName.trim() || 'Suzuki Alto VXR'
     });
 
-    onClose();
-  };
-
-  const handleQuickDemo = () => {
-    switchDemoDriver();
     onClose();
   };
 
@@ -143,7 +146,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="driver@ignition.pk"
+                  placeholder="e.g. ali@gmail.com"
                   required
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 text-sm text-white outline-none"
                 />
@@ -166,10 +169,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <div className="pt-2 text-center">
               <button
                 type="button"
-                onClick={handleQuickDemo}
+                onClick={() => setTab('signup')}
                 className="text-xs text-cyan-400 hover:underline font-semibold"
               >
-                🏎️ Or 1-Click Load Test Driver Account
+                New driver? Create a free account →
               </button>
             </div>
           </form>
@@ -264,6 +267,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             >
               Create Account & Launch Ignition
             </button>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setTab('login')}
+                className="text-xs text-cyan-400 hover:underline font-semibold"
+              >
+                Already have an account? Sign In →
+              </button>
+            </div>
           </form>
         )}
       </motion.div>

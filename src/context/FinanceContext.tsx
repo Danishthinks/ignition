@@ -68,7 +68,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) return JSON.parse(saved);
     return {
       ...DEFAULT_GOAL,
-      currentAmount: currentUser?.startingBalance ?? 265000,
+      currentAmount: currentUser?.startingBalance ?? 0,
       carName: currentUser?.targetCarName ?? DEFAULT_GOAL.carName
     };
   });
@@ -105,18 +105,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync state when active user changes
   useEffect(() => {
-    if (!currentUser) return;
-    const userGoalKey = `ignition_goal_${currentUser.id}`;
-    const userTxsKey = `ignition_txs_${currentUser.id}`;
+    const activeUserId = currentUser ? currentUser.id : 'guest';
+    const userGoalKey = `ignition_goal_${activeUserId}`;
+    const userTxsKey = `ignition_txs_${activeUserId}`;
 
     const savedGoal = localStorage.getItem(userGoalKey);
     if (savedGoal) {
-      setCarGoal(JSON.parse(savedGoal));
+      try {
+        setCarGoal(JSON.parse(savedGoal));
+      } catch {
+        // fallback
+      }
     } else {
       const initialG: CarGoal = {
         ...DEFAULT_GOAL,
-        currentAmount: currentUser.startingBalance ?? 0,
-        carName: currentUser.targetCarName ?? DEFAULT_GOAL.carName
+        currentAmount: currentUser?.startingBalance ?? 0,
+        carName: currentUser?.targetCarName ?? DEFAULT_GOAL.carName
       };
       setCarGoal(initialG);
       localStorage.setItem(userGoalKey, JSON.stringify(initialG));
@@ -124,11 +128,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const savedTxs = localStorage.getItem(userTxsKey);
     if (savedTxs) {
-      setTransactions(JSON.parse(savedTxs));
+      try {
+        setTransactions(JSON.parse(savedTxs));
+      } catch {
+        setTransactions([]);
+      }
     } else {
-      const initialTxs: Transaction[] = (currentUser.startingBalance && currentUser.startingBalance > 0)
+      const initialTxs: Transaction[] = (currentUser?.startingBalance && currentUser.startingBalance > 0)
         ? [{
-            id: 'tx-init-' + currentUser.id,
+            id: 'tx-init-' + activeUserId,
             amount: currentUser.startingBalance,
             type: 'car_deposit',
             category: 'Monthly Car Vault',

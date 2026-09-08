@@ -20,33 +20,16 @@ export const AdminDashboard: React.FC = () => {
 
   const [leads, setLeads] = useState<FinancingLead[]>(() => {
     const saved = localStorage.getItem('ignition_financing_leads');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'lead-demo-1',
-        fullName: 'Bilal Ahmed',
-        phone: '0300 9876543',
-        city: 'Lahore',
-        monthlySalary: 180000,
-        employmentType: 'Salaried Individual',
-        preferredBank: 'Meezan Bank Car Ijarah (Islamic)',
-        carName: 'Suzuki Alto VXR',
-        downpaymentSaved: 350000,
-        submittedAt: new Date(Date.now() - 2 * 86400000).toISOString()
-      },
-      {
-        id: 'lead-demo-2',
-        fullName: 'Usman Tariq',
-        phone: '0321 4567890',
-        city: 'Karachi',
-        monthlySalary: 220000,
-        employmentType: 'Self-Employed / Freelancer',
-        preferredBank: 'Bank Alfalah Auto Loan',
-        carName: 'Suzuki Cultus VXL',
-        downpaymentSaved: 500000,
-        submittedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+    if (saved) {
+      try {
+        const parsed: FinancingLead[] = JSON.parse(saved);
+        // Exclude sample demo leads
+        return parsed.filter(l => !l.id.startsWith('lead-demo-'));
+      } catch {
+        return [];
       }
-    ];
+    }
+    return [];
   });
 
   const [newQuoteText, setNewQuoteText] = useState('');
@@ -166,45 +149,59 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-white/10 text-slate-400">
-                <th className="pb-3 font-semibold">Lead Name</th>
-                <th className="pb-3 font-semibold">City</th>
-                <th className="pb-3 font-semibold">Monthly Income</th>
-                <th className="pb-3 font-semibold">Target Car</th>
-                <th className="pb-3 font-semibold">Downpayment Ready</th>
-                <th className="pb-3 font-semibold">Bank Preference</th>
-                <th className="pb-3 font-semibold text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {leads.map((l) => (
-                <tr key={l.id} className="hover:bg-white/[0.02]">
-                  <td className="py-3 font-bold text-white">
-                    <div>{l.fullName}</div>
-                    <div className="text-[10px] text-slate-400">{l.employmentType}</div>
-                  </td>
-                  <td className="py-3 text-slate-300">{l.city}</td>
-                  <td className="py-3 text-emerald-400 font-mono font-bold">{formatPKR(l.monthlySalary)}</td>
-                  <td className="py-3 text-cyan-300 font-semibold">{l.carName}</td>
-                  <td className="py-3 text-amber-300 font-mono font-bold">{formatPKR(l.downpaymentSaved)}</td>
-                  <td className="py-3 text-slate-300 max-w-[150px] truncate">{l.preferredBank}</td>
-                  <td className="py-3 text-right">
-                    <button
-                      onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName)}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all"
-                    >
-                      <MessageCircle className="w-3 h-3" />
-                      <span>WhatsApp</span>
-                    </button>
-                  </td>
+        {leads.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-bold text-slate-200">
+              No leads submitted yet
+            </p>
+            <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+              Auto financing inquiries submitted by drivers will appear here in real time and ping your WhatsApp (<span className="text-emerald-400 font-bold">03134216028</span>) directly.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-slate-400">
+                  <th className="pb-3 font-semibold">Lead Name</th>
+                  <th className="pb-3 font-semibold">City</th>
+                  <th className="pb-3 font-semibold">Monthly Income</th>
+                  <th className="pb-3 font-semibold">Target Car</th>
+                  <th className="pb-3 font-semibold">Downpayment Ready</th>
+                  <th className="pb-3 font-semibold">Bank Preference</th>
+                  <th className="pb-3 font-semibold text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {leads.map((l) => (
+                  <tr key={l.id} className="hover:bg-white/[0.02]">
+                    <td className="py-3 font-bold text-white">
+                      <div>{l.fullName}</div>
+                      <div className="text-[10px] text-slate-400">{l.employmentType}</div>
+                    </td>
+                    <td className="py-3 text-slate-300">{l.city}</td>
+                    <td className="py-3 text-emerald-400 font-mono font-bold">{formatPKR(l.monthlySalary)}</td>
+                    <td className="py-3 text-cyan-300 font-semibold">{l.carName}</td>
+                    <td className="py-3 text-amber-300 font-mono font-bold">{formatPKR(l.downpaymentSaved)}</td>
+                    <td className="py-3 text-slate-300 max-w-[150px] truncate">{l.preferredBank}</td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName)}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        <span>WhatsApp</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Drivers Roster Table */}
@@ -214,33 +211,39 @@ export const AdminDashboard: React.FC = () => {
           <span>Registered Driver Network ({drivers.length})</span>
         </h3>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-white/10 text-slate-400">
-                <th className="pb-3 font-semibold">Driver</th>
-                <th className="pb-3 font-semibold">Email</th>
-                <th className="pb-3 font-semibold">Target Car</th>
-                <th className="pb-3 font-semibold text-right">Saved In Hand</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {drivers.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.02]">
-                  <td className="py-3 font-bold flex items-center space-x-2">
-                    <span className="text-base">{u.avatar || '🏎️'}</span>
-                    <span>{u.name}</span>
-                  </td>
-                  <td className="py-3 text-slate-400 font-mono">{u.email}</td>
-                  <td className="py-3 text-slate-300">{u.targetCarName || 'Suzuki Alto VXR'}</td>
-                  <td className="py-3 text-right font-mono font-bold text-cyan-400">
-                    {u.startingBalance ? formatPKR(u.startingBalance) : '—'}
-                  </td>
+        {drivers.length === 0 ? (
+          <div className="py-6 text-center text-xs text-slate-400">
+            No drivers registered yet. Users who create accounts will appear here.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-slate-400">
+                  <th className="pb-3 font-semibold">Driver</th>
+                  <th className="pb-3 font-semibold">Email</th>
+                  <th className="pb-3 font-semibold">Target Car</th>
+                  <th className="pb-3 font-semibold text-right">Saved In Hand</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {drivers.map((u) => (
+                  <tr key={u.id} className="hover:bg-white/[0.02]">
+                    <td className="py-3 font-bold flex items-center space-x-2">
+                      <span className="text-base">{u.avatar || '🏎️'}</span>
+                      <span>{u.name}</span>
+                    </td>
+                    <td className="py-3 text-slate-400 font-mono">{u.email}</td>
+                    <td className="py-3 text-slate-300">{u.targetCarName || 'Suzuki Alto VXR'}</td>
+                    <td className="py-3 text-right font-mono font-bold text-cyan-400">
+                      {u.startingBalance ? formatPKR(u.startingBalance) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Broadcast Custom Quote Form */}

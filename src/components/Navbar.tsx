@@ -22,7 +22,7 @@ interface NavbarProps {
   onOpenTransactionModal: () => void;
   onOpenCarModal: () => void;
   onOpenImpulseModal: () => void;
-  onOpenAuthModal: () => void;
+  onOpenAuthModal: (tab?: 'login' | 'signup') => void;
   onOpenTutorialModal: () => void;
 }
 
@@ -155,9 +155,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentUser ? (
             <div className="flex items-center space-x-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10">
               <button
-                onClick={onOpenAuthModal}
+                onClick={() => onOpenAuthModal('signup')}
                 className="flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/10 transition-all"
-                title={`Logged in as ${currentUser.name}. Click to switch driver account.`}
+                title={`Logged in as ${currentUser.name}. Click to view driver profile.`}
               >
                 <span>{currentUser.avatar || '🏎️'}</span>
                 <span className="hidden sm:inline max-w-[85px] truncate">{currentUser.name.split(' ')[0]}</span>
@@ -175,13 +175,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
           ) : (
-            <button
-              onClick={onOpenAuthModal}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-white/10 text-xs font-bold text-slate-900 dark:text-white"
-            >
-              <UserIcon className="w-3.5 h-3.5" />
-              <span>Driver Sign In</span>
-            </button>
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              {/* Sign In Button */}
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => onOpenAuthModal('login')}
+                className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-300 dark:border-white/20 hover:border-cyan-500/50 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-xs font-bold text-slate-800 dark:text-slate-200 transition-all shadow-sm"
+                title="Sign in to your driver account"
+              >
+                <UserIcon className="w-3.5 h-3.5 text-cyan-500" />
+                <span>Sign In</span>
+              </motion.button>
+
+              {/* Highlighted Sign Up Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onOpenAuthModal('signup')}
+                className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400/50 transition-all"
+                title="Create a free driver account to track your car downpayment"
+              >
+                <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+                <span>Sign Up</span>
+              </motion.button>
+            </div>
           )}
 
           {/* Add Transaction Primary Button */}
