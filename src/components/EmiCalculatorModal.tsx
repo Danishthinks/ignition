@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface EmiCalculatorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenFinancingInquiry?: () => void;
+  onOpenFinancingInquiry?: (carId?: string) => void;
 }
 
 type FilterTab = 'All' | CarMake | 'Custom';
@@ -622,7 +622,7 @@ export const EmiCalculatorModal: React.FC<EmiCalculatorModalProps> = ({
               type="button"
               onClick={() => {
                 onClose();
-                onOpenFinancingInquiry();
+                onOpenFinancingInquiry(isCustomMode ? undefined : selectedCarId);
               }}
               className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 cursor-pointer"
             >

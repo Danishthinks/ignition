@@ -17,10 +17,17 @@ import {
   UserCheck,
   BadgePercent,
   Users,
-  FileCheck
+  FileCheck,
+  Car,
+  Target
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getCarPresetByName, calculateAutoEMI } from '../utils/carPresets';
+import { 
+  PAKISTANI_CAR_PRESETS, 
+  CAR_MAKES, 
+  getCarPresetByName, 
+  calculateAutoEMI 
+} from '../utils/carPresets';
 
 // Official WhatsApp Lead Number for the Creator / Auto Financing Desk
 export const OFFICIAL_WHATSAPP_NUMBER = '923134216028';
@@ -29,6 +36,7 @@ export const DISPLAY_WHATSAPP_NUMBER = '+92 313 4216028';
 interface FinancingInquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialCarId?: string;
 }
 
 export interface FinancingLead {
@@ -59,12 +67,39 @@ export interface FinancingLead {
 export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   isOpen,
   onClose,
+  initialCarId
 }) => {
   const { carGoal } = useFinance();
   const { currentUser } = useAuth();
 
-  const carPreset = useMemo(() => getCarPresetByName(carGoal.carName), [carGoal.carName]);
+  // Find the primary vehicle for which user is saving
+  const goalPreset = useMemo(() => getCarPresetByName(carGoal.carName), [carGoal.carName]);
+
+  // Selected vehicle for the financing check (defaults to target car being saved for)
+  const [selectedCarId, setSelectedCarId] = useState<string>(goalPreset.id);
+
+  // Sync on modal open or when initialCarId changes
+  useEffect(() => {
+    if (isOpen) {
+      if (initialCarId) {
+        const found = PAKISTANI_CAR_PRESETS.find(c => c.id === initialCarId);
+        if (found) {
+          setSelectedCarId(found.id);
+          return;
+        }
+      }
+      // Default directly to the target car for which savings are being done!
+      setSelectedCarId(goalPreset.id);
+    }
+  }, [isOpen, initialCarId, goalPreset.id]);
+
+  // Active vehicle preset object
+  const carPreset = useMemo(() => {
+    return PAKISTANI_CAR_PRESETS.find(c => c.id === selectedCarId) || goalPreset;
+  }, [selectedCarId, goalPreset]);
+
   const isAbove1000cc = carPreset.engineCC > 1000;
+  const isTargetCar = carPreset.id === goalPreset.id;
 
   // Form inputs
   const [fullName, setFullName] = useState(currentUser?.name || '');
@@ -98,7 +133,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   if (!isOpen) return null;
 
   const totalMarketPrice = carPreset.totalMarketPrice;
-  const downpayment30 = carGoal.targetAmount || carPreset.downpaymentTarget;
+  const downpayment30 = carPreset.downpaymentTarget;
   const financedLoan70 = Math.max(0, totalMarketPrice - downpayment30);
   const estimatedEMI = calculateAutoEMI(financedLoan70, tenureYears);
 
@@ -108,7 +143,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   const totalVerifiedIncome = primarySalary + coSalary;
 
   // SBP Debt Burden Ratio (DBR) calculations
-  // SBP max allowed DBR is 40% (or max 50% for special high-income segments)
+  // SBP max allowed DBR is 40% (or max 50% for high-income segments)
   const minSalaryRequired40 = Math.round(estimatedEMI / 0.40);
   const minSalaryRequired50 = Math.round(estimatedEMI / 0.50);
 
@@ -220,6 +255,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
 *Target Vehicle:* ${carPreset.name} (${carPreset.engineCC}cc, ${carPreset.transmission})
 *Total Ex-Factory Price:* ${formatPKR(totalMarketPrice)}
 *30% Downpayment:* ${formatPKR(downpayment30)} (Status: ${checkDownpayment ? 'CONFIRMED READY' : 'In Progress'})
+*Savings Balance in App:* ${formatPKR(carGoal.currentAmount)}
 *70% Lease Capital:* ${formatPKR(financedLoan70)}
 *Tenure Requested:* ${tenureYears} Years (${tenureYears * 12} Months)
 *Est. Monthly Installment (EMI):* ~${formatPKR(estimatedEMI)} / month
@@ -282,25 +318,91 @@ _Forward directly to Bank Relationship Officer (RO)_`;
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Instant verification under State Bank of Pakistan Consumer Financing Regulations.
+              Check eligibility for your target savings car or switch to any eligible Pakistani model.
             </p>
           </div>
         </div>
 
-        {/* Vehicle Context Bar */}
-        <div className="p-3 rounded-2xl bg-white/5 border border-white/10 mb-4 flex items-center justify-between text-xs shrink-0">
-          <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Selected Vehicle</span>
-            <strong className="text-white text-sm">{carPreset.name}</strong>
-            <div className="text-[10px] text-emerald-300 font-semibold">
-              Total: {formatLacs(totalMarketPrice)} • {carPreset.transmission}
+        {/* Vehicle Selection & Context Card */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-950/90 to-slate-900 border border-emerald-500/30 mb-4 space-y-2.5 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Car className="w-4 h-4 text-emerald-400" />
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                Select Vehicle for Financing Check
+              </label>
             </div>
+
+            {/* Quick Button to Reset to Target Savings Car */}
+            {!isTargetCar && (
+              <button
+                type="button"
+                onClick={() => setSelectedCarId(goalPreset.id)}
+                className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/40 transition-all flex items-center space-x-1 cursor-pointer self-start sm:self-auto"
+              >
+                <Target className="w-3 h-3 text-cyan-400" />
+                <span>Reset to My Savings Goal ({goalPreset.shortName})</span>
+              </button>
+            )}
           </div>
-          <div className="text-right">
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">30% Downpayment</span>
-            <strong className="text-cyan-400 text-sm">{formatPKR(downpayment30)}</strong>
-            <div className="text-[10px] text-slate-400">
-              ({formatLacs(downpayment30)})
+
+          {/* Vehicle Selector Dropdown */}
+          <div className="relative">
+            <select
+              value={selectedCarId}
+              onChange={(e) => setSelectedCarId(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 focus:border-emerald-400 text-xs text-white font-bold outline-none cursor-pointer"
+            >
+              {CAR_MAKES.map((make) => {
+                const carsInMake = PAKISTANI_CAR_PRESETS.filter(c => c.make === make);
+                if (!carsInMake.length) return null;
+                return (
+                  <optgroup key={make} label={`🚘 ${make.toUpperCase()}`} className="bg-slate-900 text-emerald-400 font-bold">
+                    {carsInMake.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-slate-900 text-white font-medium py-1">
+                        {c.name} — {formatLacs(c.totalMarketPrice)} (30% Down: {formatLacs(c.downpaymentTarget)})
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Selected Vehicle Specs Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                carPreset.transmissionType === 'Manual'
+                  ? 'bg-slate-700 text-slate-200 border border-slate-600'
+                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+              }`}>
+                {carPreset.transmission}
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 text-[9px] font-mono border border-white/10">
+                {carPreset.engineCC}cc
+              </span>
+              {isTargetCar ? (
+                <span className="text-[10px] text-cyan-400 font-bold flex items-center space-x-1">
+                  <Target className="w-3 h-3" />
+                  <span>Your Savings Goal Vehicle</span>
+                </span>
+              ) : (
+                <span className="text-[10px] text-amber-300 font-medium">
+                  Alternative Model Checked
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div>
+                <span className="text-slate-400 text-[10px]">Price: </span>
+                <strong className="text-white font-mono">{formatLacs(totalMarketPrice)}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px]">30% Down: </span>
+                <strong className="text-cyan-400 font-mono">{formatLacs(downpayment30)}</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -585,7 +687,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                   <div className="flex items-start space-x-2 text-rose-300 text-xs">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                     <div>
-                      <strong>❌ High Debt Burden ({dbrPercent.toFixed(1)}%):</strong> Under SBP Prudential Regulations, monthly EMI cannot exceed 40–50% of income. <strong>Minimum salary required for this car is {formatPKR(minSalaryRequired40)}/mo.</strong> Please add a Co-Applicant or increase downpayment.
+                      <strong>❌ High Debt Burden ({dbrPercent.toFixed(1)}%):</strong> Under SBP Prudential Regulations, monthly EMI cannot exceed 40–50% of income. <strong>Minimum salary required for {carPreset.shortName} is {formatPKR(minSalaryRequired40)}/mo.</strong> Please add a Co-Applicant or increase downpayment.
                     </div>
                   </div>
                 )}
@@ -618,7 +720,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                     className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
                   />
                   <span className="text-slate-300 text-[11px] leading-tight">
-                    <strong>30% Downpayment Ready:</strong> I have <strong>{formatPKR(downpayment30)}</strong> in cash or bank savings ready for deposit.
+                    <strong>30% Downpayment Ready:</strong> I have <strong>{formatPKR(downpayment30)}</strong> in cash or bank savings ready for deposit for this vehicle.
                   </span>
                 </label>
 

@@ -35,6 +35,7 @@ const MainAppLayout: React.FC = () => {
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
   const [isFinancingModalOpen, setIsFinancingModalOpen] = useState(false);
+  const [financingInitialCarId, setFinancingInitialCarId] = useState<string | undefined>(undefined);
   const [isEmiModalOpen, setIsEmiModalOpen] = useState(false);
 
   // Secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A) or URL hash #creator
@@ -153,7 +154,10 @@ const MainAppLayout: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.15 }}
             >
               <FinancingBanner 
-                onOpenInquiry={() => setIsFinancingModalOpen(true)} 
+                onOpenInquiry={() => {
+                  setFinancingInitialCarId(undefined);
+                  setIsFinancingModalOpen(true);
+                }} 
                 onOpenEmiCalculator={() => setIsEmiModalOpen(true)}
               />
             </motion.div>
@@ -223,14 +227,19 @@ const MainAppLayout: React.FC = () => {
 
       <FinancingInquiryModal
         isOpen={isFinancingModalOpen}
-        onClose={() => setIsFinancingModalOpen(false)}
+        onClose={() => {
+          setIsFinancingModalOpen(false);
+          setFinancingInitialCarId(undefined);
+        }}
+        initialCarId={financingInitialCarId}
       />
 
       {/* Standalone Auto Lease EMI Calculator Modal */}
       <EmiCalculatorModal
         isOpen={isEmiModalOpen}
         onClose={() => setIsEmiModalOpen(false)}
-        onOpenFinancingInquiry={() => {
+        onOpenFinancingInquiry={(carId) => {
+          setFinancingInitialCarId(carId);
           setIsEmiModalOpen(false);
           setIsFinancingModalOpen(true);
         }}
