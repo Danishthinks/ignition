@@ -18,6 +18,7 @@ import { OnboardingModal } from './components/OnboardingModal';
 import { TutorialGuideModal } from './components/TutorialGuideModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CreatorTerminalModal } from './components/CreatorTerminalModal';
+import { LandingAuthPage } from './components/LandingAuthPage';
 import type { TransactionType } from './types/finance';
 import { motion } from 'framer-motion';
 
@@ -64,6 +65,29 @@ const MainAppLayout: React.FC = () => {
     setIsTxModalOpen(true);
   };
 
+  // If not logged in and not in creator mode, show dedicated Landing & Auth Portal
+  if (!currentUser && !isCreator) {
+    return (
+      <>
+        <LandingAuthPage onOpenCreatorModal={() => setIsCreatorModalOpen(true)} />
+
+        {/* Secret Creator Terminal Modal */}
+        <CreatorTerminalModal
+          isOpen={isCreatorModalOpen}
+          onClose={() => {
+            setIsCreatorModalOpen(false);
+            if (window.location.hash === '#creator' || window.location.hash === '#admin') {
+              history.replaceState(null, '', ' ');
+            }
+          }}
+          onSuccess={() => {
+            setIsCreatorModalOpen(false);
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070B12] text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Dynamic Background Glows */}
@@ -98,49 +122,6 @@ const MainAppLayout: React.FC = () => {
         ) : (
           /* Regular Driver Experience */
           <>
-            {/* Guest Explorer Welcome & Sign Up Prompt */}
-            {!currentUser && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/70 via-slate-900 to-blue-950/70 border border-cyan-500/30 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 shrink-0 text-lg">
-                    🏎️
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-black text-sm text-white flex items-center space-x-1.5">
-                      <span>Welcome Driver! You are exploring in Preview Mode.</span>
-                    </h4>
-                    <p className="text-slate-300 text-[11px] mt-0.5">
-                      Create an account or sign in to save your personal ₨ 8.5–9.0 Lacs first car downpayment progress.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 shrink-0">
-                  <button
-                    onClick={() => {
-                      setAuthModalTab('login');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-xl border border-white/20 hover:border-cyan-400 text-slate-200 hover:text-white font-bold text-xs transition-colors"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAuthModalTab('signup');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-md shadow-cyan-500/30 transition-all"
-                  >
-                    Create Free Account
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
             {/* Daily High-Octane Motivation Banner */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
