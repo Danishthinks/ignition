@@ -1,23 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { formatPKR, formatLacs } from '../utils/formatters';
+import { formatPKR, formatLacs, formatDate } from '../utils/formatters';
+import type { FinancingLead } from './FinancingInquiryModal';
 import { 
   Zap, 
   Users, 
-  ShieldCheck, 
   Quote, 
   Crown,
   LogOut,
+  Building2,
+  Phone,
+  MessageCircle,
+  Clock,
   Car
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const { users, exitCreatorMode } = useAuth();
 
+  const [leads, setLeads] = useState<FinancingLead[]>(() => {
+    const saved = localStorage.getItem('ignition_financing_leads');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'lead-demo-1',
+        fullName: 'Bilal Ahmed',
+        phone: '0300 9876543',
+        city: 'Lahore',
+        monthlySalary: 180000,
+        employmentType: 'Salaried Individual',
+        preferredBank: 'Meezan Bank Car Ijarah (Islamic)',
+        carName: 'Suzuki Alto VXR',
+        downpaymentSaved: 350000,
+        submittedAt: new Date(Date.now() - 2 * 86400000).toISOString()
+      },
+      {
+        id: 'lead-demo-2',
+        fullName: 'Usman Tariq',
+        phone: '0321 4567890',
+        city: 'Karachi',
+        monthlySalary: 220000,
+        employmentType: 'Self-Employed / Freelancer',
+        preferredBank: 'Bank Alfalah Auto Loan',
+        carName: 'Suzuki Cultus VXL',
+        downpaymentSaved: 500000,
+        submittedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+      }
+    ];
+  });
+
   const [newQuoteText, setNewQuoteText] = useState('');
   const [newProvocation, setNewProvocation] = useState('');
   const [newAuthor, setNewAuthor] = useState('');
   const [quoteSuccess, setQuoteSuccess] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('ignition_financing_leads', JSON.stringify(leads));
+  }, [leads]);
 
   const drivers = users.filter(u => u.role === 'driver');
   const totalSavedAcrossPlatform = drivers.reduce((acc, u) => acc + (u.startingBalance || 0), 0);
@@ -33,6 +72,13 @@ export const AdminDashboard: React.FC = () => {
       setNewAuthor('');
       setQuoteSuccess(false);
     }, 2000);
+  };
+
+  const openWhatsAppLead = (phone: string, name: string, car: string) => {
+    const cleanDigits = phone.replace(/\D/g, '');
+    const intlPhone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
+    const msg = encodeURIComponent(`Salam ${name}! Regarding your car financing inquiry for ${car} on IGNITION, I can help you process your pre-approval.`);
+    window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${msg}`, '_blank');
   };
 
   return (
@@ -54,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Welcome, Creator. Manage your network of drivers and broadcast daily motivational fuel.
+                Welcome, Creator. Manage your network of drivers, monetize bank leads, and broadcast daily fuel.
               </p>
             </div>
           </div>
@@ -83,25 +129,81 @@ export const AdminDashboard: React.FC = () => {
 
         <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-white">
           <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1">
-            Total Capital In Motion
+            Bank Financing Inquiries (Leads)
           </span>
           <div className="text-2xl font-black font-heading text-emerald-400">
-            {formatPKR(totalSavedAcrossPlatform)}
+            {leads.length} Qualified Leads
           </div>
           <span className="text-xs text-emerald-300/80 font-medium">
-            {formatLacs(totalSavedAcrossPlatform)} saved across network
+            Potential Commission Value: ~₨ {leads.length * 15000} PKR
           </span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-white">
           <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1">
-            Platform Status
+            Total Capital In Motion
           </span>
-          <div className="text-2xl font-black font-heading text-amber-400 flex items-center space-x-2">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>100% Operational</span>
+          <div className="text-2xl font-black font-heading text-amber-400">
+            {formatPKR(totalSavedAcrossPlatform)}
           </div>
-          <span className="text-xs text-slate-400">PKR Currency Engine Active</span>
+          <span className="text-xs text-amber-300/80 font-medium">
+            {formatLacs(totalSavedAcrossPlatform)} saved across network
+          </span>
+        </div>
+      </div>
+
+      {/* NEW: Auto Financing Inquiries / Bank Leads Roster (MONETIZATION HUB) */}
+      <div className="p-5 rounded-2xl bg-white/5 border border-emerald-500/30 text-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-2">
+              <Building2 className="w-4 h-4" />
+              <span>Auto Financing & Bank Leads Pipeline ({leads.length})</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Drivers requesting 70% bank lease / Islamic Ijarah. Connect directly via WhatsApp to earn finder fees.
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/10 text-slate-400">
+                <th className="pb-3 font-semibold">Lead Name</th>
+                <th className="pb-3 font-semibold">City</th>
+                <th className="pb-3 font-semibold">Monthly Income</th>
+                <th className="pb-3 font-semibold">Target Car</th>
+                <th className="pb-3 font-semibold">Downpayment Ready</th>
+                <th className="pb-3 font-semibold">Bank Preference</th>
+                <th className="pb-3 font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {leads.map((l) => (
+                <tr key={l.id} className="hover:bg-white/[0.02]">
+                  <td className="py-3 font-bold text-white">
+                    <div>{l.fullName}</div>
+                    <div className="text-[10px] text-slate-400">{l.employmentType}</div>
+                  </td>
+                  <td className="py-3 text-slate-300">{l.city}</td>
+                  <td className="py-3 text-emerald-400 font-mono font-bold">{formatPKR(l.monthlySalary)}</td>
+                  <td className="py-3 text-cyan-300 font-semibold">{l.carName}</td>
+                  <td className="py-3 text-amber-300 font-mono font-bold">{formatPKR(l.downpaymentSaved)}</td>
+                  <td className="py-3 text-slate-300 max-w-[150px] truncate">{l.preferredBank}</td>
+                  <td className="py-3 text-right">
+                    <button
+                      onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>WhatsApp</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

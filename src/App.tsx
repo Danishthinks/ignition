@@ -4,6 +4,8 @@ import { FinanceProvider } from './context/FinanceContext';
 import { Navbar } from './components/Navbar';
 import { MotivationBanner } from './components/MotivationBanner';
 import { CarGoalHero } from './components/CarGoalHero';
+import { FinancingBanner } from './components/FinancingBanner';
+import { FinancingInquiryModal } from './components/FinancingInquiryModal';
 import { MilestonesRoadmap } from './components/MilestonesRoadmap';
 import { FinancialSummary } from './components/FinancialSummary';
 import { AnalyticsView } from './components/AnalyticsView';
@@ -29,6 +31,7 @@ const MainAppLayout: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
+  const [isFinancingModalOpen, setIsFinancingModalOpen] = useState(false);
 
   // Secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A) or URL hash #creator
   useEffect(() => {
@@ -47,7 +50,7 @@ const MainAppLayout: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('hashchange', handleHashChange);
-    handleHashChange(); // check on initial load
+    handleHashChange();
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -112,6 +115,15 @@ const MainAppLayout: React.FC = () => {
               />
             </motion.div>
 
+            {/* NEW: Car Financing 70% Bank Lease Inquiry Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <FinancingBanner onOpenInquiry={() => setIsFinancingModalOpen(true)} />
+            </motion.div>
+
             {/* 4-Stage Milestones Roadmap */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -173,6 +185,11 @@ const MainAppLayout: React.FC = () => {
       <ImpulseCalculatorModal
         isOpen={isImpulseModalOpen}
         onClose={() => setIsImpulseModalOpen(false)}
+      />
+
+      <FinancingInquiryModal
+        isOpen={isFinancingModalOpen}
+        onClose={() => setIsFinancingModalOpen(false)}
       />
 
       <AuthModal
