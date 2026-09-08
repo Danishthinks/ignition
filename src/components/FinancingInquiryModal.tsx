@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   Send,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -48,7 +49,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   const [city, setCity] = useState('Lahore');
   const [salaryStr, setSalaryStr] = useState('1,50,000');
   const [employmentType, setEmploymentType] = useState('Salaried Individual');
-  const [preferredBank, setPreferredBank] = useState('Meezan Bank Car Ijarah (Islamic)');
+  const [preferredBank, setPreferredBank] = useState('Meezan Bank Car Ijarah (Fast-Track Partner)');
   const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
@@ -68,9 +69,20 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
     'Other City'
   ];
 
-  const banks = [
-    'Meezan Bank Car Ijarah (Islamic)',
-    'Bank Alfalah Auto Loan',
+  const fastTrackBanks = [
+    {
+      value: 'Meezan Bank Car Ijarah (Fast-Track Partner)',
+      label: '⭐ Meezan Bank Car Ijarah — Fast-Track Partner (Islamic)',
+      bold: true
+    },
+    {
+      value: 'Bank Alfalah Auto Loan (Fast-Track Partner)',
+      label: '⭐ Bank Alfalah Auto Loan — Fast-Track Partner (Conventional)',
+      bold: true
+    }
+  ];
+
+  const standardBanks = [
     'Faysal Bank Islami Auto Finance',
     'BankIslami Car Financing',
     'Habib Metro Auto Finance',
@@ -286,20 +298,48 @@ _Sent via IGNITION First Car Finance Tracker_`;
               </div>
 
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Preferred Bank / Lease
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Preferred Bank / Lease
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider flex items-center space-x-1">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Fast-Track Desk</span>
+                  </span>
+                </div>
                 <select
                   value={preferredBank}
                   onChange={(e) => setPreferredBank(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/10 focus:border-emerald-400 text-xs text-white outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-emerald-500/30 focus:border-emerald-400 text-xs text-white outline-none font-semibold"
                 >
-                  {banks.map((b) => (
-                    <option key={b} value={b} className="bg-slate-900 text-white">
-                      {b}
-                    </option>
-                  ))}
+                  <optgroup label="⚡ FAST-TRACK PARTNER BANKS (PRIORITY APPROVAL)" className="font-black text-emerald-400 bg-slate-900">
+                    {fastTrackBanks.map((b) => (
+                      <option 
+                        key={b.value} 
+                        value={b.value} 
+                        className="font-extrabold text-white bg-slate-900 py-1.5"
+                      >
+                        {b.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="OTHER COMMERCIAL & ISLAMIC BANKS" className="font-normal text-slate-400 bg-slate-900">
+                    {standardBanks.map((b) => (
+                      <option key={b} value={b} className="font-normal text-slate-300 bg-slate-900">
+                        {b}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
+
+                {preferredBank.includes('Fast-Track Partner') && (
+                  <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start space-x-2">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-emerald-300 font-semibold leading-tight">
+                      <strong>Fast-Track Partner Selected:</strong> Priority 4–5 day approval desk with direct RO relationship support.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

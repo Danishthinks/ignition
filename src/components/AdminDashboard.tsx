@@ -186,7 +186,15 @@ export const AdminDashboard: React.FC = () => {
                     <td className="py-3 text-emerald-400 font-mono font-bold">{formatPKR(l.monthlySalary)}</td>
                     <td className="py-3 text-cyan-300 font-semibold">{l.carName}</td>
                     <td className="py-3 text-amber-300 font-mono font-bold">{formatPKR(l.downpaymentSaved)}</td>
-                    <td className="py-3 text-slate-300 max-w-[150px] truncate">{l.preferredBank}</td>
+                    <td className="py-3 text-slate-300 max-w-[170px]">
+                      {l.preferredBank.includes('Fast-Track') ? (
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          ⚡ {l.preferredBank.replace('⭐ ', '')}
+                        </span>
+                      ) : (
+                        <span className="truncate block">{l.preferredBank}</span>
+                      )}
+                    </td>
                     <td className="py-3 text-right">
                       <button
                         onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName)}

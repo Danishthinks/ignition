@@ -29,8 +29,8 @@ export const FinancingBanner: React.FC<FinancingBannerProps> = ({ onOpenInquiry 
               <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 AUTO FINANCING NETWORK
               </span>
-              <span className="text-xs text-slate-400 hidden sm:inline">
-                • Meezan Bank, Bank Alfalah, Faysal Bank & More
+              <span className="text-xs text-emerald-300/90 font-medium hidden sm:inline">
+                • Fast-Track Partners: Meezan Bank & Bank Alfalah
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-heading font-black text-white">
