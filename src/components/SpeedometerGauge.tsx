@@ -54,13 +54,12 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
             cy="150"
             r={radius}
             fill="none"
-            stroke="currentColor"
+            stroke="rgba(255, 255, 255, 0.12)"
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${circumference}`}
             strokeDashoffset="0"
             strokeLinecap="round"
             transform="rotate(150 150 150)"
-            className="text-slate-200 dark:text-slate-800/80"
           />
 
           {/* Redline Alert Zone Track (last 15% - target 8.5 to 9 Lacs PKR range) */}
@@ -69,7 +68,7 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
             cy="150"
             r={radius}
             fill="none"
-            stroke="rgba(239, 68, 68, 0.25)"
+            stroke="rgba(239, 68, 68, 0.35)"
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength * 0.15} ${circumference}`}
             strokeDashoffset={-arcLength * 0.85}
@@ -86,8 +85,11 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
             stroke="url(#gaugeGradient)"
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${circumference}`}
-            initial={{ strokeDashoffset: arcLength }}
-            animate={{ strokeDashoffset }}
+            initial={{ strokeDashoffset: arcLength, opacity: 0 }}
+            animate={{ 
+              strokeDashoffset,
+              opacity: clampedPct > 0 ? 1 : 0
+            }}
             transition={{ duration: 1.2, ease: [0.34, 1.56, 0.64, 1] }}
             strokeLinecap="round"
             transform="rotate(150 150 150)"
@@ -109,9 +111,8 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
                   y1="28"
                   x2="150"
                   y2={tick % 50 === 0 ? "38" : "33"}
-                  stroke={isRedline ? "#EF4444" : "currentColor"}
+                  stroke={isRedline ? "#EF4444" : "rgba(255, 255, 255, 0.35)"}
                   strokeWidth={tick % 50 === 0 ? "2.5" : "1.5"}
-                  className={isRedline ? "text-red-500" : "text-slate-400 dark:text-slate-600"}
                 />
               </g>
             );
@@ -123,24 +124,25 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
             <motion.g
               initial={{ rotate: -120 }}
               animate={{ rotate: needleRotation }}
+              style={{ transformOrigin: "0px 0px" }}
               transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
             >
               {/* Needle pointer */}
               <polygon
                 points="-3.5,8 0,-92 3.5,8"
                 fill="#06B6D4"
-                className="filter drop-shadow-[0_0_6px_rgba(6,182,212,0.8)]"
+                className="filter drop-shadow-[0_0_8px_rgba(6,182,212,0.9)]"
               />
               <circle cx="0" cy="-65" r="2.5" fill="#FFFFFF" />
             </motion.g>
 
             {/* Central Dial Pivot Cap */}
-            <circle cx="0" cy="0" r="16" className="fill-slate-900 dark:fill-[#080C14] stroke-slate-300 dark:stroke-cyan-500/40" strokeWidth="2.5" />
+            <circle cx="0" cy="0" r="16" className="fill-[#080C14] stroke-cyan-400/50" strokeWidth="2.5" />
             <circle cx="0" cy="0" r="7" className="fill-cyan-400" />
           </g>
 
           {/* 0% and 100% labels */}
-          <text x="50" y="195" className="text-[10px] font-bold fill-slate-400 dark:fill-slate-500" textAnchor="middle">0%</text>
+          <text x="50" y="195" className="text-[10px] font-bold fill-slate-300" textAnchor="middle">0%</text>
           <text x="250" y="195" className="text-[10px] font-bold fill-red-400" textAnchor="middle">100%</text>
           <text x="248" y="207" className="text-[8px] font-semibold fill-red-500/80" textAnchor="middle">KEYS</text>
         </svg>
@@ -153,12 +155,12 @@ export const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             className="flex items-baseline space-x-0.5"
           >
-            <span className="text-3xl sm:text-4xl font-heading font-black tracking-tight text-slate-900 dark:text-white">
+            <span className="text-3xl sm:text-4xl font-heading font-black tracking-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
               {clampedPct.toFixed(1)}
             </span>
-            <span className="text-base font-bold text-cyan-500">%</span>
+            <span className="text-base font-black text-cyan-400">%</span>
           </motion.div>
-          <span className="text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-cyan-400/80 mt-0.5">
+          <span className="text-[11px] uppercase tracking-widest font-extrabold text-cyan-400/90 mt-0.5">
             Ignition Ready
           </span>
         </div>

@@ -8,6 +8,8 @@ import {
 import { X, Car, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+import { PAKISTANI_CAR_PRESETS } from '../utils/carPresets';
+
 interface CarCustomizerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,19 +34,11 @@ export const CarCustomizerModal: React.FC<CarCustomizerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const popularCars = [
-    { name: 'Suzuki Alto VXR', year: '2024', defaultTarget: 850000 },
-    { name: 'Suzuki Cultus VXL', year: '2023', defaultTarget: 875000 },
-    { name: 'Suzuki Swift GL', year: '2022', defaultTarget: 900000 },
-    { name: 'Toyota Yaris ATIV', year: '2021', defaultTarget: 900000 },
-    { name: 'Honda City 1.2L', year: '2021', defaultTarget: 900000 },
-  ];
-
   const targetPresets = [
-    { label: '8.50 Lacs', amount: 850000 },
-    { label: '8.75 Lacs (Mid)', amount: 875000 },
-    { label: '9.00 Lacs', amount: 900000 },
-    { label: '10.0 Lacs', amount: 1000000 },
+    { label: '9.15 Lacs (Alto 30%)', amount: 915000 },
+    { label: '13.05 Lacs (Cultus 30%)', amount: 1305000 },
+    { label: '14.85 Lacs (Swift 30%)', amount: 1485000 },
+    { label: '15.45 Lacs (Yaris 30%)', amount: 1545000 },
   ];
 
   const handleSave = (e: React.FormEvent) => {
@@ -99,24 +93,29 @@ export const CarCustomizerModal: React.FC<CarCustomizerModalProps> = ({
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
             Popular 1st Car Presets in Pakistan
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {popularCars.map((car) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {PAKISTANI_CAR_PRESETS.map((car) => (
               <button
-                key={car.name}
+                key={car.id}
                 type="button"
                 onClick={() => {
                   setCarName(car.name);
                   setModelYear(car.year);
-                  setTargetAmountStr(formatInputCommas(car.defaultTarget));
+                  setTargetAmountStr(formatInputCommas(car.downpaymentTarget));
                 }}
-                className={`text-left p-2 rounded-xl border text-xs transition-all ${
+                className={`text-left p-2.5 rounded-xl border text-xs transition-all ${
                   carName === car.name
-                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold shadow-md shadow-cyan-500/10'
                     : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
                 }`}
               >
-                <div className="font-semibold truncate">{car.name}</div>
-                <div className="text-[10px] text-slate-400">{car.year} • {formatLacs(car.defaultTarget)}</div>
+                <div className="font-bold truncate text-white">{car.name}</div>
+                <div className="text-[10px] text-cyan-300 font-bold mt-0.5">
+                  30% Goal: {formatLacs(car.downpaymentTarget)}
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  Market: {formatLacs(car.totalMarketPrice)}
+                </div>
               </button>
             ))}
           </div>

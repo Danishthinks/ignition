@@ -35,12 +35,14 @@ interface FinanceContextType {
   triggerCelebration: () => void;
 }
 
+import { getCarPresetByName } from '../utils/carPresets';
+
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 const DEFAULT_GOAL: CarGoal = {
   carName: 'Suzuki Alto VXR',
   modelYear: '2024',
-  targetAmount: 875000,
+  targetAmount: 915000,
   currentAmount: 0,
   targetDate: '2027-04-15',
   carPhotoType: 'hatchback'
@@ -66,10 +68,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [carGoal, setCarGoal] = useState<CarGoal>(() => {
     const saved = localStorage.getItem(`ignition_goal_${userId}`);
     if (saved) return JSON.parse(saved);
+    const targetCar = currentUser?.targetCarName ?? DEFAULT_GOAL.carName;
+    const preset = getCarPresetByName(targetCar);
     return {
       ...DEFAULT_GOAL,
-      currentAmount: currentUser?.startingBalance ?? 0,
-      carName: currentUser?.targetCarName ?? DEFAULT_GOAL.carName
+      carName: targetCar,
+      modelYear: preset.year,
+      targetAmount: preset.downpaymentTarget,
+      currentAmount: currentUser?.startingBalance ?? 0
     };
   });
 
@@ -117,10 +123,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // fallback
       }
     } else {
+      const targetCar = currentUser?.targetCarName ?? DEFAULT_GOAL.carName;
+      const preset = getCarPresetByName(targetCar);
       const initialG: CarGoal = {
         ...DEFAULT_GOAL,
-        currentAmount: currentUser?.startingBalance ?? 0,
-        carName: currentUser?.targetCarName ?? DEFAULT_GOAL.carName
+        carName: targetCar,
+        modelYear: preset.year,
+        targetAmount: preset.downpaymentTarget,
+        currentAmount: currentUser?.startingBalance ?? 0
       };
       setCarGoal(initialG);
       localStorage.setItem(userGoalKey, JSON.stringify(initialG));

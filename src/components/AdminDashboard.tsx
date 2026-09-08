@@ -57,10 +57,11 @@ export const AdminDashboard: React.FC = () => {
     }, 2000);
   };
 
-  const openWhatsAppLead = (phone: string, name: string, car: string) => {
+  const openWhatsAppLead = (phone: string, name: string, car: string, tenure?: number, emi?: number) => {
     const cleanDigits = phone.replace(/\D/g, '');
     const intlPhone = cleanDigits.startsWith('0') ? '92' + cleanDigits.slice(1) : cleanDigits;
-    const msg = encodeURIComponent(`Salam ${name}! Regarding your car financing inquiry for ${car} on IGNITION, I can help you process your pre-approval.`);
+    const details = tenure && emi ? ` (${tenure} yrs tenure, est. installment ~${formatPKR(emi)}/mo)` : '';
+    const msg = encodeURIComponent(`Salam ${name}! Regarding your car financing inquiry for ${car}${details} on IGNITION, I can help you process your pre-approval.`);
     window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${msg}`, '_blank');
   };
 
@@ -171,6 +172,7 @@ export const AdminDashboard: React.FC = () => {
                   <th className="pb-3 font-semibold">Monthly Income</th>
                   <th className="pb-3 font-semibold">Target Car</th>
                   <th className="pb-3 font-semibold">Downpayment Ready</th>
+                  <th className="pb-3 font-semibold">Tenure & Est. EMI</th>
                   <th className="pb-3 font-semibold">Bank Preference</th>
                   <th className="pb-3 font-semibold text-right">Action</th>
                 </tr>
@@ -186,6 +188,18 @@ export const AdminDashboard: React.FC = () => {
                     <td className="py-3 text-emerald-400 font-mono font-bold">{formatPKR(l.monthlySalary)}</td>
                     <td className="py-3 text-cyan-300 font-semibold">{l.carName}</td>
                     <td className="py-3 text-amber-300 font-mono font-bold">{formatPKR(l.downpaymentSaved)}</td>
+                    <td className="py-3 text-slate-300">
+                      {l.tenureYears ? (
+                        <div>
+                          <div className="font-bold text-white text-[11px]">{l.tenureYears} Yrs ({l.tenureYears * 12}m)</div>
+                          <div className="text-[10px] text-emerald-400 font-mono font-semibold">
+                            ~{formatPKR(l.estimatedMonthlyInstallment || 0)}/mo
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-[11px]">3 Yrs (~₨ 84k/m)</span>
+                      )}
+                    </td>
                     <td className="py-3 text-slate-300 max-w-[170px]">
                       {l.preferredBank.includes('Fast-Track') ? (
                         <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -197,7 +211,7 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="py-3 text-right">
                       <button
-                        onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName)}
+                        onClick={() => openWhatsAppLead(l.phone, l.fullName, l.carName, l.tenureYears, l.estimatedMonthlyInstallment)}
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all"
                       >
                         <MessageCircle className="w-3 h-3" />

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatInputCommas, parseInputCommas, formatLacs } from '../utils/formatters';
+import { PAKISTANI_CAR_PRESETS, getCarPresetByName } from '../utils/carPresets';
 
 const OFFICIAL_SUPPORT_WHATSAPP = '923134216028';
 const DISPLAY_SUPPORT_WHATSAPP = '+92 313 4216028';
@@ -410,6 +411,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
                     className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-white/10 focus:border-cyan-400 text-xs text-white outline-none"
                   />
                 </div>
+
+                {/* Quick car pills */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {PAKISTANI_CAR_PRESETS.map((car) => (
+                    <button
+                      key={car.id}
+                      type="button"
+                      onClick={() => setCarName(car.name)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${
+                        carName === car.name
+                          ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold'
+                          : 'bg-white/5 text-slate-400 border-white/10 hover:border-cyan-400/50'
+                      }`}
+                    >
+                      {car.shortName}
+                    </button>
+                  ))}
+                </div>
+                {carName && (
+                  <div className="mt-1.5 text-[10px] text-cyan-300/90 font-medium">
+                    30% Downpayment Goal: <strong className="text-cyan-300">{formatLacs(getCarPresetByName(carName).downpaymentTarget)}</strong> • Market: {formatLacs(getCarPresetByName(carName).totalMarketPrice)}
+                  </div>
+                )}
               </div>
             </div>
 

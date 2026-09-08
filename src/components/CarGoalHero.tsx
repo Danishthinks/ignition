@@ -147,7 +147,7 @@ export const CarGoalHero: React.FC<CarGoalHeroProps> = ({
                 {formatPKR(carGoal.targetAmount)}
               </div>
               <span className="text-[11px] text-slate-400 font-medium">
-                8.5 – 9.0 Lacs Range
+                {formatLacs(carGoal.targetAmount)} (30% Downpayment)
               </span>
             </div>
 

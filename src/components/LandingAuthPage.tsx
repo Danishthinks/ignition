@@ -38,13 +38,9 @@ interface LandingAuthPageProps {
   onOpenCreatorModal: () => void;
 }
 
-const CAR_OPTIONS = [
-  'Suzuki Alto VXR',
-  'Suzuki Cultus VXL',
-  'Suzuki Swift GLX',
-  'Honda City 1.2 LS',
-  'Toyota Yaris ATIV'
-];
+import { PAKISTANI_CAR_PRESETS, getCarPresetByName } from '../utils/carPresets';
+
+const CAR_OPTIONS = PAKISTANI_CAR_PRESETS.map((c) => c.name);
 
 export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorModal }) => {
   const { login, signup, resetPassword } = useAuth();
@@ -431,21 +427,26 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
 
                       {/* Quick car pills */}
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {CAR_OPTIONS.slice(0, 3).map((car) => (
+                        {PAKISTANI_CAR_PRESETS.map((car) => (
                           <button
-                            key={car}
+                            key={car.id}
                             type="button"
-                            onClick={() => setCarName(car)}
+                            onClick={() => setCarName(car.name)}
                             className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${
-                              carName === car
-                                ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                              carName === car.name
+                                ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold'
                                 : 'bg-white/5 text-slate-400 border-white/10 hover:border-cyan-400/50'
                             }`}
                           >
-                            {car.split(' ')[1] || car}
+                            {car.shortName}
                           </button>
                         ))}
                       </div>
+                      {carName && (
+                        <div className="mt-1.5 text-[10px] text-cyan-300/90 font-medium">
+                          30% Downpayment Goal: <strong className="text-cyan-300">{formatLacs(getCarPresetByName(carName).downpaymentTarget)}</strong> • Market: {formatLacs(getCarPresetByName(carName).totalMarketPrice)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
