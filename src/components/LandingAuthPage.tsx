@@ -25,9 +25,14 @@ import {
   ChevronRight,
   ShieldAlert,
   Eye,
-  EyeOff
+  EyeOff,
+  KeyRound,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const OFFICIAL_SUPPORT_WHATSAPP = '923134216028';
+const DISPLAY_SUPPORT_WHATSAPP = '+92 313 4216028';
 
 interface LandingAuthPageProps {
   onOpenCreatorModal: () => void;
@@ -42,16 +47,22 @@ const CAR_OPTIONS = [
 ];
 
 export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorModal }) => {
-  const { login, signup } = useAuth();
+  const { login, signup, resetPassword } = useAuth();
   const { isDarkMode, toggleTheme } = useFinance();
 
-  const [tab, setTab] = useState<'signup' | 'login'>('signup');
+  const [tab, setTab] = useState<'signup' | 'login' | 'forgot'>('signup');
 
   // Sign in state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+
+  // Password / Account recovery state
+  const [recoverEmail, setRecoverEmail] = useState('');
+  const [recoverNewPassword, setRecoverNewPassword] = useState('');
+  const [showRecoverPassword, setShowRecoverPassword] = useState(false);
+  const [recoverStatus, setRecoverStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Sign up state
   const [name, setName] = useState('');
@@ -61,6 +72,41 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
   const [signupError, setSignupError] = useState('');
   const [startingBalanceStr, setStartingBalanceStr] = useState('');
   const [carName, setCarName] = useState('Suzuki Alto VXR');
+
+  const handleRecoverSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoverStatus(null);
+    if (!recoverEmail.trim() || !recoverNewPassword) return;
+
+    if (recoverNewPassword.length < 6) {
+      setRecoverStatus({
+        type: 'error',
+        message: 'New password must be at least 6 characters long.'
+      });
+      return;
+    }
+
+    const res = resetPassword(recoverEmail.trim(), recoverNewPassword);
+    if (res.success) {
+      setRecoverStatus({
+        type: 'success',
+        message: res.message || 'Password reset successfully!'
+      });
+    } else {
+      setRecoverStatus({
+        type: 'error',
+        message: res.message || 'Account recovery failed.'
+      });
+    }
+  };
+
+  const handleWhatsAppAssistance = (topic: 'forgot_email' | 'general_recovery') => {
+    const text = topic === 'forgot_email'
+      ? `Salam Ignition Support! I forgot which email address I used for my driver vault. Please assist me in recovering my account.`
+      : `Salam Ignition Support! I need help recovering access to my car downpayment vault.`;
+    const url = `https://api.whatsapp.com/send?phone=${OFFICIAL_SUPPORT_WHATSAPP}&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -433,7 +479,7 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
                     </button>
                   </p>
                 </form>
-              ) : (
+              ) : tab === 'login' ? (
                 /* Tab 2: Sign In Form */
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
@@ -454,9 +500,18 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                      Vault Password
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        Vault Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setTab('forgot'); setLoginError(''); }}
+                        className="text-[11px] text-cyan-400 hover:underline font-semibold"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                       <input
@@ -496,17 +551,141 @@ export const LandingAuthPage: React.FC<LandingAuthPageProps> = ({ onOpenCreatorM
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
-                  <div className="pt-2 text-center text-[11px] text-slate-400">
-                    Don't have an account yet?{' '}
+                  <div className="pt-2 flex flex-col items-center space-y-1.5 text-[11px] text-slate-400">
                     <button
                       type="button"
-                      onClick={() => setTab('signup')}
-                      className="text-cyan-400 hover:underline font-bold"
+                      onClick={() => { setTab('forgot'); setLoginError(''); }}
+                      className="text-slate-400 hover:text-cyan-400 transition-colors"
                     >
-                      Create free account
+                      Forgot your email or need recovery help? Click here →
                     </button>
+                    <p>
+                      Don't have an account yet?{' '}
+                      <button
+                        type="button"
+                        onClick={() => setTab('signup')}
+                        className="text-cyan-400 hover:underline font-bold"
+                      >
+                        Create free account
+                      </button>
+                    </p>
                   </div>
                 </form>
+              ) : (
+                /* Tab 3: Account Recovery & Assistance */
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 text-cyan-400 mb-1">
+                    <KeyRound className="w-5 h-5" />
+                    <h3 className="font-heading font-black text-base text-white">
+                      Vault Recovery & Assistance
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Forgot your password? Reset it below using your registered email. If you forgot your email, our WhatsApp support desk is here to help.
+                  </p>
+
+                  <form onSubmit={handleRecoverSubmit} className="space-y-3.5 pt-1">
+                    <div>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Your Registered Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                        <input
+                          type="email"
+                          value={recoverEmail}
+                          onChange={(e) => setRecoverEmail(e.target.value)}
+                          placeholder="e.g. danish@example.com"
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 text-sm text-white outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Set New Vault Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                        <input
+                          type={showRecoverPassword ? 'text' : 'password'}
+                          value={recoverNewPassword}
+                          onChange={(e) => setRecoverNewPassword(e.target.value)}
+                          placeholder="Min. 6 characters"
+                          required
+                          minLength={6}
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 text-sm text-white outline-none transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRecoverPassword(!showRecoverPassword)}
+                          className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                        >
+                          {showRecoverPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {recoverStatus && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-3 rounded-xl border text-xs font-medium flex items-center space-x-2 ${
+                          recoverStatus.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            : 'bg-red-500/10 border-red-500/30 text-red-400'
+                        }`}
+                      >
+                        {recoverStatus.type === 'success' ? (
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        ) : (
+                          <ShieldAlert className="w-4 h-4 shrink-0" />
+                        )}
+                        <span>{recoverStatus.message}</span>
+                      </motion.div>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-sm transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      <span>Reset Password & Unlock Vault</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </form>
+
+                  {/* Forgot Email Section */}
+                  <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-2 mt-4">
+                    <div className="flex items-center space-x-2 text-emerald-400">
+                      <MessageSquare className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        Forgot Which Email You Used?
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Don't worry. Contact our official WhatsApp desk ({DISPLAY_SUPPORT_WHATSAPP}). Share your name or target car, and we will manually look up your account.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleWhatsAppAssistance('forgot_email')}
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all flex items-center justify-center space-x-2"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Contact Support on WhatsApp ({DISPLAY_SUPPORT_WHATSAPP})</span>
+                    </button>
+                  </div>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTab('login')}
+                      className="text-xs text-cyan-400 hover:underline font-semibold"
+                    >
+                      ← Back to Driver Sign In
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </motion.div>

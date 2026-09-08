@@ -12,6 +12,7 @@ interface AuthContextType {
     startingBalance?: number;
     carName?: string;
   }) => { success: boolean; user?: User; message?: string };
+  resetPassword: (email: string, newPassword: string) => { success: boolean; message?: string };
   logout: () => void;
   switchDemoDriver: () => void;
   unlockCreatorMode: (passcode: string) => boolean;
@@ -143,6 +144,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, user: newUser };
   };
 
+  // Password recovery / reset
+  const resetPassword = (email: string, newPassword: string): { success: boolean; message?: string } => {
+    const cleanEmail = email.trim().toLowerCase();
+    const foundIndex = users.findIndex(u => u.email.toLowerCase() === cleanEmail);
+    if (foundIndex === -1) {
+      return { 
+        success: false, 
+        message: 'No driver account found with this email. Please check your spelling or contact our WhatsApp support.' 
+      };
+    }
+
+    if (newPassword.trim().length < 6) {
+      return {
+        success: false,
+        message: 'New password must be at least 6 characters long.'
+      };
+    }
+
+    const updatedUser = {
+      ...users[foundIndex],
+      password: newPassword.trim()
+    };
+
+    const updatedUsers = [...users];
+    updatedUsers[foundIndex] = updatedUser;
+
+    setUsers(updatedUsers);
+    setCurrentUser(updatedUser);
+    return { success: true, message: 'Password updated successfully! Welcome back to your vault.' };
+  };
+
   const logout = () => {
     setCurrentUser(null);
   };
@@ -190,6 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         users,
         login,
         signup,
+        resetPassword,
         logout,
         switchDemoDriver,
         unlockCreatorMode,
