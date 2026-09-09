@@ -54,140 +54,127 @@ export const MotivationBanner: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white/90 dark:bg-cockpit-card/90 shadow-lg backdrop-blur-md p-5 sm:p-6 transition-colors">
-      {/* Decorative Accent Glow */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+    <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 dark:border-amber-400/20 bg-gradient-to-r from-amber-500/[0.06] via-white/80 to-cyan-500/[0.06] dark:from-amber-500/[0.07] dark:via-slate-900/80 dark:to-cyan-500/[0.07] shadow-sm backdrop-blur-md p-3 sm:py-3.5 sm:px-4.5 transition-all">
+      {/* Subtle decorative warm glow */}
+      <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
 
-      {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-white/5 pb-3.5 mb-4">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-            <Flame className="w-4 h-4 fill-current" />
+      {/* Cute Top Compact Bar */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        {/* Left: Cute spark badge & tag */}
+        <div className="flex items-center space-x-2 min-w-0">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs shrink-0">
+            <Flame className="w-3.5 h-3.5 fill-current" />
           </div>
-          <div>
-            <h3 className="text-sm font-heading font-black tracking-wide text-slate-900 dark:text-white uppercase flex items-center space-x-2">
-              <span>Daily Dream Ignition Fuel</span>
-              <span className="text-[10px] py-0.5 px-2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
-                {activeQuote.tag}
-              </span>
-            </h3>
-          </div>
+          <span className="text-xs font-heading font-black tracking-wide text-slate-800 dark:text-slate-200 uppercase shrink-0">
+            Daily Spark
+          </span>
+          <span className="text-[10px] py-0.5 px-2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-500/20 truncate max-w-[120px] sm:max-w-none">
+            {activeQuote.tag}
+          </span>
         </div>
 
-        {/* Persona Selectors */}
-        <div className="flex items-center space-x-1.5 self-start sm:self-auto bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
-          <button
-            onClick={() => setCoachTone('hardcore')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-              coachTone === 'hardcore'
-                ? 'bg-red-500 text-white shadow-sm shadow-red-500/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Raw provocation and hardcore reality check"
-          >
-            <Swords className="w-3 h-3" />
-            <span>Hardcore</span>
-          </button>
+        {/* Right: Cute Persona Selectors & Quick Actions */}
+        <div className="flex items-center space-x-1.5 shrink-0">
+          {/* Compact 3-tone pill selector */}
+          <div className="flex items-center bg-slate-200/70 dark:bg-white/5 p-0.5 rounded-lg text-[10px] font-bold">
+            <button
+              onClick={() => setCoachTone('hardcore')}
+              className={`px-2 py-0.5 rounded-md transition-all flex items-center space-x-1 cursor-pointer ${
+                coachTone === 'hardcore'
+                  ? 'bg-rose-500 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Hardcore reality check"
+            >
+              <Swords className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Hardcore</span>
+            </button>
 
-          <button
-            onClick={() => setCoachTone('visionary')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-              coachTone === 'visionary'
-                ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Inspirational and visionary mindset"
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>Visionary</span>
-          </button>
+            <button
+              onClick={() => setCoachTone('visionary')}
+              className={`px-2 py-0.5 rounded-md transition-all flex items-center space-x-1 cursor-pointer ${
+                coachTone === 'visionary'
+                  ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Visionary mindset"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Visionary</span>
+            </button>
 
-          <button
-            onClick={() => setCoachTone('stoic')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-              coachTone === 'stoic'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Stoic discipline and laser focus"
+            <button
+              onClick={() => setCoachTone('stoic')}
+              className={`px-2 py-0.5 rounded-md transition-all flex items-center space-x-1 cursor-pointer ${
+                coachTone === 'stoic'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Stoic discipline"
+            >
+              <Compass className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Stoic</span>
+            </button>
+          </div>
+
+          {/* Mini Shuffle Button */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={handleRefresh}
+            className="p-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition-all cursor-pointer"
+            title="Get another spark"
           >
-            <Compass className="w-3 h-3" />
-            <span>Stoic</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isRotating ? 'animate-spin' : ''}`} />
+          </motion.button>
+
+          {/* Mini Daily Notification Bell Toggle */}
+          <button
+            onClick={enableDailyReminders}
+            className={`p-1 rounded-lg border transition-all cursor-pointer ${
+              notificationStatus === 'enabled'
+                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                : 'bg-slate-200/70 dark:bg-white/5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border-slate-200 dark:border-white/10'
+            }`}
+            title={notificationStatus === 'enabled' ? 'Daily reminders active' : 'Enable daily notification'}
+          >
+            {notificationStatus === 'enabled' ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Quote & Provocation Body */}
+      {/* Cute Quote & Provocation Body */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeQuote.id}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.3 }}
-          className="relative pl-6 sm:pl-8 py-1"
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-1.5"
         >
-          <Quote className="absolute left-0 top-0 w-5 h-5 text-cyan-500/40 dark:text-cyan-400/40" />
-          
-          {/* Main Inspirational Quote */}
-          <p className="text-base sm:text-lg font-medium text-slate-800 dark:text-slate-100 leading-relaxed italic">
-            "{activeQuote.quote}"
-          </p>
-
-          {/* Hard-hitting Provocation Statement */}
-          <div className="mt-3 flex items-start space-x-2 p-2.5 rounded-xl bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/20">
-            <ShieldAlert className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-xs sm:text-sm font-semibold text-amber-800 dark:text-amber-300">
-              <span className="uppercase tracking-wider font-extrabold text-[11px] text-amber-600 dark:text-amber-400 mr-1.5">
-                Provocation:
+          {/* Main Quote Text */}
+          <div className="flex items-start space-x-1.5">
+            <Quote className="w-3 h-3 text-amber-500 shrink-0 mt-0.5 opacity-80" />
+            <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug italic">
+              "{activeQuote.quote}"
+              <span className="ml-1.5 text-[11px] font-normal not-italic text-slate-500 dark:text-slate-400 inline-block">
+                — {activeQuote.author}
               </span>
-              {activeQuote.provocation}
             </p>
           </div>
+
+          {/* Compact Cute Provocation Pill */}
+          {activeQuote.provocation && (
+            <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 w-fit max-w-full">
+              <ShieldAlert className="w-3 h-3 text-amber-500 shrink-0" />
+              <span className="truncate">
+                <strong className="uppercase text-[9px] tracking-wider text-amber-600 dark:text-amber-400 mr-1">Action:</strong>
+                {activeQuote.provocation}
+              </span>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
-
-      {/* Footer Controls */}
-      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <span className="text-xs text-slate-500 dark:text-slate-400 italic">
-          — {activeQuote.author}
-        </span>
-
-        <div className="flex items-center space-x-2">
-          {/* Daily Reminder Button */}
-          <button
-            onClick={enableDailyReminders}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              notificationStatus === 'enabled'
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10'
-            }`}
-            title="Receive a daily motivational notification to keep you focused"
-          >
-            {notificationStatus === 'enabled' ? (
-              <>
-                <BellRing className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Daily Bell Active</span>
-              </>
-            ) : (
-              <>
-                <Bell className="w-3.5 h-3.5" />
-                <span>Notify Me Daily</span>
-              </>
-            )}
-          </button>
-
-          {/* Shuffle / Provoke Button */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleRefresh}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 text-xs font-bold transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRotating ? 'animate-spin' : ''}`} />
-            <span>Provoke Me Again</span>
-          </motion.button>
-        </div>
-      </div>
     </div>
   );
 };
