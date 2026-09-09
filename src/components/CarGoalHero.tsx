@@ -105,7 +105,11 @@ export const CarGoalHero: React.FC<CarGoalHeroProps> = ({
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center py-6">
         {/* Speedometer Gauge */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center">
-          <SpeedometerGauge percentage={percentage} />
+          <SpeedometerGauge 
+            percentage={percentage} 
+            currentAmount={carGoal.currentAmount}
+            targetAmount={carGoal.targetAmount}
+          />
           <div className="mt-1 flex items-center space-x-2 text-xs font-semibold text-slate-300">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>{percentage >= 100 ? '🎉 100% SECURED - KEYS UNLOCKED' : `${formatLacs(remaining)} left to ignition`}</span>
