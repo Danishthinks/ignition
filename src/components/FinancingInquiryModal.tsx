@@ -56,6 +56,10 @@ export interface FinancingLead {
   preferredBank: string;
   carName: string;
   downpaymentSaved: number;
+  downpaymentRatio: number;
+  downpaymentAmount: number;
+  financedLoanAmount: number;
+  financedPercent: number;
   tenureYears: number;
   estimatedMonthlyInstallment: number;
   checkDownpayment: boolean;
@@ -112,6 +116,11 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   const [preferredBank, setPreferredBank] = useState('Meezan Bank Car Ijarah (Fast-Track Partner)');
   const [tenureYears, setTenureYears] = useState<number>(3); // 3 Years standard default
 
+  // Flexible Downpayment (defaults to 30% SBP minimum, but flexible: 30%, 35%, 40%, 50%, 60%, or custom PKR)
+  const [downpaymentRatio, setDownpaymentRatio] = useState<number>(0.30);
+  const [isCustomDownpayment, setIsCustomDownpayment] = useState<boolean>(false);
+  const [customDownpaymentStr, setCustomDownpaymentStr] = useState<string>('');
+
   // Co-Applicant (for applicants needing additional income to pass SBP DBR)
   const [hasCoApplicant, setHasCoApplicant] = useState<boolean>(false);
   const [coApplicantSalaryStr, setCoApplicantSalaryStr] = useState<string>('80,000');
@@ -135,9 +144,21 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
   if (!isOpen) return null;
 
   const totalMarketPrice = carPreset.totalMarketPrice;
-  const downpayment30 = carPreset.downpaymentTarget;
-  const financedLoan70 = Math.max(0, totalMarketPrice - downpayment30);
-  const estimatedEMI = calculateAutoEMI(financedLoan70, tenureYears);
+  const sbpMinDownpayment = Math.round(totalMarketPrice * 0.30);
+
+  // Active downpayment amount & percentage
+  const activeDownpaymentAmount = isCustomDownpayment
+    ? (() => {
+        const parsed = parseInputCommas(customDownpaymentStr);
+        if (!parsed || isNaN(parsed)) return sbpMinDownpayment;
+        return Math.min(totalMarketPrice, Math.max(sbpMinDownpayment, parsed));
+      })()
+    : Math.round(totalMarketPrice * downpaymentRatio);
+
+  const activeDownpaymentPercent = Math.round((activeDownpaymentAmount / totalMarketPrice) * 100);
+  const financedLoanAmount = Math.max(0, totalMarketPrice - activeDownpaymentAmount);
+  const financedPercent = Math.max(0, 100 - activeDownpaymentPercent);
+  const estimatedEMI = calculateAutoEMI(financedLoanAmount, tenureYears);
 
   // Income calculations
   const primarySalary = parseInputCommas(salaryStr) || 0;
@@ -159,6 +180,14 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
 
   const allChecksPassed = checkDownpayment && checkBankStatement && checkJobTenure && checkCleanCIB;
   const is100PercentQualified = (isDbrPassed || isDbrBorderline) && allChecksPassed;
+
+  const downpaymentOptions = [
+    { ratio: 0.30, label: '30%', tag: 'SBP Min', desc: '70% Financed' },
+    { ratio: 0.35, label: '35%', tag: '', desc: '65% Financed' },
+    { ratio: 0.40, label: '40%', tag: 'Popular', desc: '60% Financed (Lower EMI)' },
+    { ratio: 0.50, label: '50%', tag: '50/50', desc: '50% Financed (Half Down)' },
+    { ratio: 0.60, label: '60%', tag: 'Low Profit', desc: '40% Financed (Minimal Markup)' }
+  ];
 
   const tenureOptions = [
     { years: 1, months: 12, label: '1 Year' },
@@ -224,6 +253,10 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
       preferredBank,
       carName: carPreset.name,
       downpaymentSaved: carGoal.currentAmount,
+      downpaymentRatio: activeDownpaymentPercent / 100,
+      downpaymentAmount: activeDownpaymentAmount,
+      financedLoanAmount,
+      financedPercent,
       tenureYears,
       estimatedMonthlyInstallment: estimatedEMI,
       checkDownpayment,
@@ -248,7 +281,7 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
         ? `BORDERLINE 40-50% (${dbrPercent.toFixed(1)}%)` 
         : `EXCEEDS SBP LIMIT (${dbrPercent.toFixed(1)}%)`;
 
-    const message = `*🏎️ IGNITION 100% PRE-QUALIFIED FINANCING LEAD*
+    const message = `*🏎️ IGNITION PRE-QUALIFIED AUTO FINANCING LEAD*
 ---------------------------------------
 *Lead Status:* ${leadTier}
 *Priority Tier:* ${turboTag}
@@ -258,9 +291,9 @@ export const FinancingInquiryModal: React.FC<FinancingInquiryModalProps> = ({
 *Employment:* ${newLead.employmentType}
 *Target Vehicle:* ${carPreset.name} (${carPreset.engineCC}cc, ${carPreset.transmission})
 *Total Ex-Factory Price:* ${formatPKR(totalMarketPrice)}
-*30% Downpayment:* ${formatPKR(downpayment30)} (Status: ${checkDownpayment ? 'CONFIRMED READY' : 'In Progress'})
+*Selected Downpayment:* ${formatPKR(activeDownpaymentAmount)} (${activeDownpaymentPercent}% Downpayment) - ${checkDownpayment ? 'CONFIRMED READY' : 'In Progress'}
+*Bank Financed Capital:* ${formatPKR(financedLoanAmount)} (${financedPercent}% Islamic Lease / Ijarah)
 *Savings Balance in App:* ${formatPKR(carGoal.currentAmount)}
-*70% Lease Capital:* ${formatPKR(financedLoan70)}
 *Tenure Requested:* ${tenureYears} Years (${tenureYears * 12} Months)
 *Est. Monthly Installment (EMI):* ~${formatPKR(estimatedEMI)} / month
 ---------------------------------------
@@ -417,8 +450,12 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                 <strong className="text-white font-mono">{formatLacs(totalMarketPrice)}</strong>
               </div>
               <div>
-                <span className="text-slate-400 text-[10px]">30% Down: </span>
-                <strong className="text-cyan-400 font-mono">{formatLacs(downpayment30)}</strong>
+                <span className="text-slate-400 text-[10px]">{activeDownpaymentPercent}% Down: </span>
+                <strong className="text-cyan-400 font-mono">{formatLacs(activeDownpaymentAmount)}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px]">{financedPercent}% Bank: </span>
+                <strong className="text-emerald-400 font-mono">{formatLacs(financedLoanAmount)}</strong>
               </div>
             </div>
           </div>
@@ -597,6 +634,109 @@ _Forward directly to Bank Relationship Officer (RO)_`;
               )}
             </div>
 
+            {/* Flexible Downpayment & Equity Contribution Selector */}
+            <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-emerald-500/25 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="flex items-center space-x-2">
+                  <BadgePercent className="w-4 h-4 text-emerald-400" />
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                    Downpayment & Own Equity Contribution
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-mono font-bold text-cyan-300">
+                    {activeDownpaymentPercent}% ({formatLacs(activeDownpaymentAmount)})
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    • Bank: {financedPercent}% ({formatLacs(financedLoanAmount)})
+                  </span>
+                </div>
+              </div>
+
+              {/* Downpayment Ratio Pill Buttons */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {downpaymentOptions.map((opt) => {
+                  const isSelected = !isCustomDownpayment && downpaymentRatio === opt.ratio;
+                  return (
+                    <button
+                      key={opt.ratio}
+                      type="button"
+                      onClick={() => {
+                        setIsCustomDownpayment(false);
+                        setDownpaymentRatio(opt.ratio);
+                      }}
+                      className={`p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-black shadow-md shadow-cyan-500/10'
+                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{opt.label}</div>
+                      <div className="text-[8px] text-slate-400 truncate">
+                        {opt.tag || opt.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {/* Custom Downpayment Pill Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDownpayment(true);
+                    if (!customDownpaymentStr) {
+                      setCustomDownpaymentStr(formatInputCommas(activeDownpaymentAmount.toString()));
+                    }
+                  }}
+                  className={`p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                    isCustomDownpayment
+                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-black shadow-md shadow-emerald-500/10'
+                      : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="text-xs font-bold">Custom ₨</div>
+                  <div className="text-[8px] text-slate-400 truncate">
+                    {isCustomDownpayment ? `${activeDownpaymentPercent}%` : 'Enter PKR'}
+                  </div>
+                </button>
+              </div>
+
+              {/* Custom Input Field when Custom is selected */}
+              {isCustomDownpayment && (
+                <div className="pt-2 border-t border-white/10 space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>Enter Cash Downpayment (SBP Min: 30% = {formatPKR(sbpMinDownpayment)}):</span>
+                    <span className="text-cyan-300 font-bold font-mono">
+                      {activeDownpaymentPercent}% of car value
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-xs font-bold text-cyan-400">₨</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={customDownpaymentStr}
+                      onChange={(e) => setCustomDownpaymentStr(formatInputCommas(e.target.value))}
+                      placeholder={formatInputCommas(sbpMinDownpayment.toString())}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 focus:border-emerald-400 text-xs font-mono font-bold text-white outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Equity Helper Tip */}
+              <div className="text-[10px] text-slate-400 pt-0.5 flex flex-wrap items-center justify-between gap-1">
+                <span>
+                  💡 <strong>Tip:</strong> Paying more than 30% downpayment reduces your monthly installment and makes passing SBP 40% DBR much easier!
+                </span>
+                {activeDownpaymentPercent > 30 && (
+                  <span className="text-emerald-400 font-bold">
+                    +{activeDownpaymentPercent - 30}% Extra Equity Applied
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* SBP Tenure Duration Selector */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -655,7 +795,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3 mb-3">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Estimated Monthly Installment (70% Lease)
+                    Estimated Monthly Installment ({financedPercent}% Lease / Ijarah)
                   </span>
                   <div className="text-2xl sm:text-3xl font-black font-heading text-emerald-400">
                     ~{formatPKR(estimatedEMI)}
@@ -695,7 +835,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                   <div className="flex items-start space-x-2 text-amber-300 text-xs">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
                     <div>
-                      <strong>⚠️ Borderline DBR ({dbrPercent.toFixed(1)}%):</strong> SBP standard cap is 40%, but banks accept up to 50% for high-grade profiles. Adding a co-applicant or 5% extra downpayment will ensure 100% guaranteed approval.
+                      <strong>⚠️ Borderline DBR ({dbrPercent.toFixed(1)}%):</strong> SBP standard cap is 40%, but banks accept up to 50% for high-grade profiles. Adding a co-applicant or increasing downpayment (e.g. to {Math.min(60, activeDownpaymentPercent + 10)}%) will lower your monthly EMI to pass comfortably.
                     </div>
                   </div>
                 )}
@@ -704,7 +844,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                   <div className="flex items-start space-x-2 text-rose-300 text-xs">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                     <div>
-                      <strong>❌ High Debt Burden ({dbrPercent.toFixed(1)}%):</strong> Under SBP Prudential Regulations, monthly EMI cannot exceed 40–50% of income. <strong>Minimum salary required for {carPreset.shortName} is {formatPKR(minSalaryRequired40)}/mo.</strong> Please add a Co-Applicant or increase downpayment.
+                      <strong>❌ High Debt Burden ({dbrPercent.toFixed(1)}%):</strong> Under SBP Prudential Regulations, monthly EMI cannot exceed 40–50% of income. <strong>Minimum salary required for {carPreset.shortName} at {activeDownpaymentPercent}% down is {formatPKR(minSalaryRequired40)}/mo.</strong> Try selecting a higher downpayment (e.g. 40% or 50%) or add a Co-Applicant.
                     </div>
                   </div>
                 )}
@@ -737,7 +877,7 @@ _Forward directly to Bank Relationship Officer (RO)_`;
                     className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-400"
                   />
                   <span className="text-slate-300 text-[11px] leading-tight">
-                    <strong>30% Downpayment Ready:</strong> I have <strong>{formatPKR(downpayment30)}</strong> in cash or bank savings ready for deposit for this vehicle.
+                    <strong>{activeDownpaymentPercent}% Downpayment Ready:</strong> I have <strong>{formatPKR(activeDownpaymentAmount)}</strong> in cash or bank savings ready for deposit for this vehicle ({financedPercent}% financed by bank).
                   </span>
                 </label>
 

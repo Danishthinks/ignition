@@ -106,7 +106,7 @@ export const EmiCalculatorModal: React.FC<EmiCalculatorModalProps> = ({
   // Pricing calculations
   const totalCarPrice = isCustomMode
     ? parseInputCommas(customPriceStr) || 4500000
-    : currentPreset?.totalMarketPrice || 3045000;
+    : currentPreset?.totalMarketPrice || 3326446;
 
   const downpaymentAmount = Math.round(totalCarPrice * downpaymentRatio);
   const financedLoanAmount = Math.max(0, totalCarPrice - downpaymentAmount);
@@ -123,10 +123,12 @@ export const EmiCalculatorModal: React.FC<EmiCalculatorModalProps> = ({
   ];
 
   const downpaymentRatios = [
-    { label: '20%', value: 0.20, note: 'Special Bank Schemes' },
+    { label: '20%', value: 0.20, note: 'Special Schemes' },
     { label: '30%', value: 0.30, note: 'SBP Minimum' },
-    { label: '40%', value: 0.40, note: 'Lower Monthly EMI' },
-    { label: '50%', value: 0.50, note: 'Minimal Profit' }
+    { label: '35%', value: 0.35, note: 'Moderate Equity' },
+    { label: '40%', value: 0.40, note: 'Lower EMI' },
+    { label: '50%', value: 0.50, note: 'Half Down' },
+    { label: '60%', value: 0.60, note: 'Low Profit' }
   ];
 
   const brandTabs: FilterTab[] = ['All', 'Suzuki', 'Toyota', 'Honda', 'Changan', 'Kia', 'Hyundai', 'Custom'];
@@ -451,7 +453,7 @@ export const EmiCalculatorModal: React.FC<EmiCalculatorModalProps> = ({
                   {formatPKR(downpaymentAmount)}
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                 {downpaymentRatios.map((d) => (
                   <button
                     key={d.value}
@@ -467,7 +469,7 @@ export const EmiCalculatorModal: React.FC<EmiCalculatorModalProps> = ({
                     <div className={`text-[8px] font-medium truncate ${
                       downpaymentRatio === d.value ? 'text-slate-900 font-semibold' : 'text-slate-400'
                     }`}>
-                      {d.value === 0.30 ? 'SBP Min' : `${(d.value * 100)}%`}
+                      {d.value === 0.30 ? 'SBP Min' : `${Math.round(d.value * 100)}%`}
                     </div>
                   </button>
                 ))}

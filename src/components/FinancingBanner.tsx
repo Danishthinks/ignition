@@ -35,10 +35,10 @@ export const FinancingBanner: React.FC<FinancingBannerProps> = ({ onOpenInquiry,
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-heading font-black text-white">
-              Need Bank Financing for the remaining 70%?
+              Need Bank Financing or Islamic Lease?
             </h3>
             <p className="text-xs text-slate-300 mt-0.5 max-w-xl">
-              You are securing the 30% downpayment (<strong className="text-emerald-300">{formatLacs(carGoal.targetAmount)}</strong>) for your {carGoal.carName}. Get connected with authorized auto lease agents for the remaining 70%.
+              Securing your downpayment (<strong className="text-emerald-300">{formatLacs(carGoal.targetAmount)}</strong>) for your {carGoal.carName}? Connect with verified bank officers with flexible 30% to 70% auto financing.
             </p>
           </div>
         </div>
